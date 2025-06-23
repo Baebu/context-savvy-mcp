@@ -1,4 +1,4 @@
-// src/infrastructure/di/container-initializer.ts - Updated with Process Management
+// src/infrastructure/di/container-initializer.ts - Updated with Intelligent Search Tools
 import type { Container } from 'inversify';
 import type { IToolRegistry } from '../../core/interfaces/tool-registry.interface.js';
 import type { IResourceRegistry } from '../../core/interfaces/resource-registry.interface.js';
@@ -65,6 +65,14 @@ import {
   ExportWorkspaceTemplateTool
 } from '../../application/tools/workspace-management.tools.js';
 
+// Project Creation and Management Tools
+import { CreateProjectTool, ListProjectsTool } from '../../application/tools/project-creation.tool.js';
+import {
+  InitProjectsDirectoryTool,
+  GetProjectsConfigTool,
+  UpdateProjectsConfigTool
+} from '../../application/tools/projects-config.tool.js';
+
 // Semantic Tools
 import {
   SemanticSearchTool,
@@ -72,6 +80,9 @@ import {
   CreateContextRelationshipTool,
   UpdateEmbeddingsTool
 } from '../../application/tools/semantic-search.tool.js';
+
+// Intelligent Search Tools (Phase 1 - Token Efficiency)
+import { CompactSearchTool, ExpandResultTool, PrecisionEditTool } from '../../application/tools/compact-search.tool.js';
 
 // Phase 3: Automatic State Management Tools
 import {
@@ -144,6 +155,9 @@ import {
   TriggerMaintenanceTool
 } from '../../application/tools/autonomous-control.tool.js';
 
+// Workspace Persistence Tools
+import { workspacePersistenceTools } from '../../application/tools/workspace-persistence.tool.js';
+
 // Removed: EnhancedStoreContextTool and EnhancedQueryContextTool imports
 
 // Resources
@@ -151,11 +165,12 @@ import { ProjectFilesResource } from '../../application/resources/project-files.
 
 // Prompts
 import { ContextSummaryPrompt } from '../../application/prompts/context-summary.prompt.js';
+
 import { logger } from '../../utils/logger.js';
 
 export class ContainerInitializer {
   static async initialize(container: Container): Promise<void> {
-    logger.info('Initializing container with enhanced process management...');
+    logger.info('Initializing container with intelligent search and enhanced process management...');
 
     // Ensure Database Migrations are applied first
     const databaseHandler = container.get<IDatabaseHandler>('DatabaseHandler') as DatabaseAdapter;
@@ -179,7 +194,7 @@ export class ContainerInitializer {
     // Initialize and register prompts
     await this.initializePrompts(container);
 
-    logger.info('Container initialization complete with enhanced process management');
+    logger.info('Container initialization complete with intelligent search and enhanced process management');
   }
 
   private static async initializeSemanticServices(container: Container): Promise<void> {
@@ -238,6 +253,12 @@ export class ContainerInitializer {
     toolRegistry.register(container.get<FindRelatedContextTool>(FindRelatedContextTool));
     toolRegistry.register(container.get<CreateContextRelationshipTool>(CreateContextRelationshipTool));
     toolRegistry.register(container.get<UpdateEmbeddingsTool>(UpdateEmbeddingsTool));
+
+    // Intelligent Search Tools (Phase 1 - Token Efficiency) - NEW!
+    toolRegistry.register(container.get<CompactSearchTool>(CompactSearchTool));
+    toolRegistry.register(container.get<ExpandResultTool>(ExpandResultTool));
+    toolRegistry.register(container.get<PrecisionEditTool>(PrecisionEditTool));
+    logger.info('✅ Intelligent Search Tools registered (90% token reduction enabled)');
 
     // Phase 3: Automatic State Management Tools
     toolRegistry.register(container.get<FindActiveTasksTool>(FindActiveTasksTool));
@@ -298,11 +319,23 @@ export class ContainerInitializer {
     toolRegistry.register(container.get<GetAutonomousStatusTool>(GetAutonomousStatusTool));
     toolRegistry.register(container.get<TriggerMaintenanceTool>(TriggerMaintenanceTool));
 
+    // Workspace Persistence Tools
+    workspacePersistenceTools.forEach(ToolClass => {
+      toolRegistry.register(container.get<any>(ToolClass));
+    });
+
     toolRegistry.register(new SwitchWorkspaceTool());
     toolRegistry.register(new SyncWorkspaceTool());
     toolRegistry.register(new TrackFileTool());
     toolRegistry.register(new DeleteWorkspaceTool());
     toolRegistry.register(new ExportWorkspaceTemplateTool());
+
+    // Project creation and management
+    toolRegistry.register(container.get<CreateProjectTool>(CreateProjectTool));
+    toolRegistry.register(container.get<ListProjectsTool>(ListProjectsTool));
+    toolRegistry.register(container.get<InitProjectsDirectoryTool>(InitProjectsDirectoryTool));
+    toolRegistry.register(container.get<GetProjectsConfigTool>(GetProjectsConfigTool));
+    toolRegistry.register(container.get<UpdateProjectsConfigTool>(UpdateProjectsConfigTool));
     // GetWorkspaceStatsTool removed - functionality consolidated into system-health.tool.ts
 
     // File parsing
@@ -316,7 +349,9 @@ export class ContainerInitializer {
 
     try {
       const allTools = await toolRegistry.getAllTools();
-      logger.info(`Registered ${allTools.length} tools including process management capabilities`);
+      logger.info(
+        `✅ Registered ${allTools.length} tools including intelligent search and process management capabilities`
+      );
     } catch (error) {
       logger.warn({ error }, 'Could not get tool count, but registration completed');
     }

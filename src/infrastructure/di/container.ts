@@ -27,6 +27,13 @@ import { EmbeddingService } from '../../application/services/embedding.service.j
 import { SecurityValidatorService } from '../../application/services/security-validator.service.js';
 import { ConfigManagerService } from '../../application/services/config-manager.service.js';
 
+// NEW: Workspace Persistence Services
+import { WorkspacePersistenceService } from '../../application/services/workspace-persistence.service.js';
+import { StartupSequenceService } from '../../application/services/startup-sequence.service.js';
+
+// Intelligent Search Service (Phase 1 - Token Efficiency)
+import { IntelligentSearchService } from '../../application/services/intelligent-search.service.js';
+
 // Enhanced File Operations Tools
 import {
   SearchFilesTool,
@@ -142,7 +149,11 @@ container.bind<IFilesystemHandler>('FilesystemHandler').to(FilesystemAdapter).in
 container.bind<IDatabaseHandler>('DatabaseHandler').to(DatabaseAdapter).inSingletonScope();
 container.bind<IEnhancedCLIHandler>('CLIHandler').to(EnhancedCLIAdapter).inSingletonScope();
 container.bind<ISecurityValidator>('SecurityValidator').to(SecurityValidatorService).inSingletonScope();
-container.bind<ConfigManagerService>(ConfigManagerService).to(ConfigManagerService).inSingletonScope();
+container.bind<ConfigManagerService>('ConfigManager').to(ConfigManagerService).inSingletonScope();
+
+// Workspace Persistence Services
+container.bind<WorkspacePersistenceService>('WorkspacePersistenceService').to(WorkspacePersistenceService).inSingletonScope();
+container.bind<StartupSequenceService>('StartupSequenceService').to(StartupSequenceService).inSingletonScope();
 
 // Enhanced File Operations Tools
 container.bind<SearchFilesTool>(SearchFilesTool).to(SearchFilesTool).inSingletonScope();
@@ -255,6 +266,17 @@ container.bind<AdvancedFeaturesService>(AdvancedFeaturesService).to(AdvancedFeat
 
 // Autonomous Monitoring Service
 import { AutonomousMonitorService } from '../../application/services/autonomous-monitor.service.js';
+
+// Workspace Persistence Tools
+import { 
+  ExecuteStartupRecoveryTool,
+  GetWorkspaceRegistryTool,
+  UpdateDirectoryAccessTool,
+  CreateDirectoryBookmarkTool,
+  GetDirectoryBookmarksTool,
+  DiscoverDirectoriesFromContextTool,
+  GetPersistenceConfigTool
+} from '../../application/tools/workspace-persistence.tool.js';
 container.bind<AutonomousMonitorService>(AutonomousMonitorService).to(AutonomousMonitorService).inSingletonScope();
 
 // Phase 7: Advanced Features Tools
@@ -297,3 +319,25 @@ container
   .inSingletonScope();
 container.bind<GetAutonomousStatusTool>(GetAutonomousStatusTool).to(GetAutonomousStatusTool).inSingletonScope();
 container.bind<TriggerMaintenanceTool>(TriggerMaintenanceTool).to(TriggerMaintenanceTool).inSingletonScope();
+
+// Workspace Persistence Tools
+container.bind<ExecuteStartupRecoveryTool>(ExecuteStartupRecoveryTool).to(ExecuteStartupRecoveryTool).inSingletonScope();
+container.bind<GetWorkspaceRegistryTool>(GetWorkspaceRegistryTool).to(GetWorkspaceRegistryTool).inSingletonScope();
+container.bind<UpdateDirectoryAccessTool>(UpdateDirectoryAccessTool).to(UpdateDirectoryAccessTool).inSingletonScope();
+container.bind<CreateDirectoryBookmarkTool>(CreateDirectoryBookmarkTool).to(CreateDirectoryBookmarkTool).inSingletonScope();
+container.bind<GetDirectoryBookmarksTool>(GetDirectoryBookmarksTool).to(GetDirectoryBookmarksTool).inSingletonScope();
+container.bind<DiscoverDirectoriesFromContextTool>(DiscoverDirectoriesFromContextTool).to(DiscoverDirectoriesFromContextTool).inSingletonScope();
+container.bind<GetPersistenceConfigTool>(GetPersistenceConfigTool).to(GetPersistenceConfigTool).inSingletonScope();
+
+// Intelligent Search Service (Phase 1 - Token Efficiency)
+import {
+  CompactSearchTool,
+  ExpandResultTool,
+  PrecisionEditTool
+} from '../../application/tools/compact-search.tool.js';
+
+// Intelligent Search Service and Tools
+container.bind<IntelligentSearchService>('IntelligentSearchService').to(IntelligentSearchService).inSingletonScope();
+container.bind<CompactSearchTool>(CompactSearchTool).to(CompactSearchTool).inSingletonScope();
+container.bind<ExpandResultTool>(ExpandResultTool).to(ExpandResultTool).inSingletonScope();
+container.bind<PrecisionEditTool>(PrecisionEditTool).to(PrecisionEditTool).inSingletonScope();

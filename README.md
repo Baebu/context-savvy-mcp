@@ -1,335 +1,451 @@
-# Context Savvy MCP 🧠✨
+# UnifiedVR: Wireless Mixed-Reality Tracking System
 
-_The AI assistant's best friend - because even Claude needs a good memory_
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Platform: Windows](https://img.shields.io/badge/Platform-Windows-blue.svg)](https://www.microsoft.com/windows)
+[![VR: OpenVR](https://img.shields.io/badge/VR-OpenVR-green.svg)](https://github.com/ValveSoftware/openvr)
+[![Unity: 2022.3+](https://img.shields.io/badge/Unity-2022.3+-purple.svg)](https://unity.com/)
 
-## The Problem That Wouldn't Go Away
+## 🚀 Overview
 
-You know that feeling when you're deep in a coding session with Claude, everything's flowing perfectly, and then... 💥 **Context limit hit.** Your conversation gets truncated. The AI forgets what you were working on. All that beautiful, collaborative momentum? Gone.
+UnifiedVR is a comprehensive wireless VR system that seamlessly integrates **Quest 2 headsets**, **Valve Index controllers**, **Vive 3.0 trackers**, and **Lighthouse base stations** into a unified mixed-reality tracking platform. Experience the freedom of wireless VR with the precision of lighthouse tracking and the versatility of mixed hardware ecosystems.
 
-Or maybe you're the type who switches between projects constantly (guilty 🙋‍♂️), and every time you start a new chat, you have to re-explain your entire setup, your file structure, your preferences, your... everything.
+### ✨ Key Features
 
-**What if your AI assistant could remember?** Not just remember, but truly _understand_ your projects, maintain context across conversations, and actually _help_ you stay organized?
+- **🔄 Wireless Streaming**: Stream PC VR content to Quest 2 with <20ms latency
+- **🎯 Mixed Tracking**: Combine inside-out (Quest) and outside-in (Lighthouse) tracking
+- **🎮 Universal Controllers**: Use Index controllers wirelessly with any headset
+- **📍 Body Tracking**: Full-body tracking with up to 8 Vive trackers
+- **🔧 Auto-Calibration**: Automatic space calibration with drift correction
+- **📊 Performance Monitoring**: Real-time performance analysis and optimization
+- **🤝 Cross-Platform**: Unity integration with C# APIs and native plugins
 
-That's exactly why this exists.
-
-## What This Thing Actually Does
-
-Context Savvy MCP is a turbocharged memory system for Claude Desktop that turns your AI assistant into something that feels almost... permanent. Instead of starting from scratch every conversation, Claude can:
-
-- **Remember everything** across chat sessions (your projects, preferences, ongoing work)
-- **Execute commands safely** (because sometimes you need to actually _do_ things, not just talk about them)
-- **Manage files intelligently** (read, write, search, organize - all with context awareness)
-- **Learn from your patterns** (it gets smarter about how you work over time)
-- **Keep itself organized** (autonomous maintenance, cleanup, optimization)
-
-Think of it as giving Claude a persistent workspace and a really, really good memory.
-
-## The Magic in Action 🎩
-
-**Scenario 1: Project Continuity**
+## 🏗️ System Architecture
 
 ```
-You (in Chat #1): "Help me refactor this React component..."
-[Work gets done, chat ends naturally]
-
-You (in Chat #47, two weeks later): "Hey, what was I working on?"
-Claude: "You were refactoring the UserProfile component. You'd gotten the props interface done and were working on the state management. Should we continue where we left off?"
+┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
+│   Quest 2       │    │   PC with        │    │  Lighthouse     │
+│   (Wireless)    │◄──►│ UnifiedVR Driver │◄──►│  Base Stations  │
+│                 │    │                  │    │                 │
+└─────────────────┘    └──────────────────┘    └─────────────────┘
+         │                        │                        │
+         │                        │                        │
+         ▼                        ▼                        ▼
+┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
+│ Hand Tracking   │    │ Unity            │    │ Index           │
+│ & Gestures      │    │ Integration      │    │ Controllers     │
+└─────────────────┘    └──────────────────┘    └─────────────────┘
+                                │
+                                ▼
+                       ┌──────────────────┐
+                       │ Vive Trackers    │
+                       │ (Body Tracking)  │
+                       └──────────────────┘
 ```
 
-**Scenario 2: Context-Aware File Operations**
+## 🛠️ Technical Specifications
 
-```
-You: "Find all the TODO comments in my project"
-Claude: [Searches across your entire codebase] "Found 23 TODOs. The urgent ones are in auth.ts and database.service.ts. Want me to show you those first?"
+### Performance Targets
+- **Latency**: <20ms motion-to-photon (wireless)
+- **Frame Rate**: 90Hz sustained, 120Hz capable
+- **Tracking Accuracy**: Sub-millimeter precision
+- **Network Bandwidth**: 150-300 Mbps (adaptive)
+- **Range**: 10m play area with 5GHz WiFi 6
 
-You: "Fix the auth one"
-Claude: [Opens file, understands context, makes intelligent suggestions] "I see the issue - you're missing error handling in the token validation. Here's a fix..."
-```
+### Hardware Compatibility
+| Component | Model | Status | Notes |
+|-----------|-------|--------|-------|
+| **HMD** | Meta Quest 2/3 | ✅ Full | Primary wireless display |
+| **Controllers** | Valve Index | ✅ Full | Finger tracking, haptics |
+| **Trackers** | HTC Vive 3.0 | ✅ Full | Up to 8 simultaneous |
+| **Base Stations** | Lighthouse 2.0 | ✅ Full | 2-4 stations supported |
+| **Dongles** | Generic 2.4GHz | ✅ Full | USB dongles for pairing |
 
-**Scenario 3: Learning Your Workflow**
+### Software Stack
+- **Driver Layer**: OpenVR-compatible native driver (C++)
+- **Networking**: Custom UDP protocol with QUIC optimization
+- **Tracking**: libsurvive + OpenXR integration
+- **Unity Plugin**: Native C# bindings with editor tools
+- **Quest Client**: Android Unity application
 
-```
-After a few weeks of use...
+## 🚀 Quick Start
 
-Claude: "I noticed you always run tests after refactoring. Should I go ahead and run them now?"
-You: "Yes! And check the coverage while you're at it."
-Claude: [Executes tests, analyzes coverage, provides detailed report] "All green! Coverage increased by 2.3%. The new code is well-tested."
-```
+### Prerequisites
+- Windows 10/11 with Visual Studio 2019+
+- Unity 2022.3 LTS with XR Plugin Management
+- SteamVR installed and configured
+- WiFi 6 router (5GHz/6GHz dedicated band recommended)
 
-## Why This Exists (The Real Story)
-
-I got tired of explaining my setup to Claude every. single. time.
-
-I'm a developer who juggles multiple projects, has strong opinions about code organization, and relies heavily on AI assistance for the tedious stuff. But every new conversation meant starting over - re-explaining my file structure, my preferences, my coding standards, what I was working on.
-
-So I built this. Initially just for me, with too much coffee and stubborn determination.
-
-Turns out, having an AI assistant with persistent memory and the ability to actually _do_ things (not just suggest them) changes everything. Conversations flow naturally. Work gets done faster. Context never gets lost.
-
-**The honest truth:** This started as a personal tool and grew into something that might actually be useful to other developers. It works well for me, but I'm curious if it resonates with anyone else.
-
-## Quick Reality Check ✋
-
-**What definitely works:**
-
-- Persistent context across Claude conversations
-- Safe command execution with security boundaries
-- Intelligent file operations and project management
-- Task tracking and workflow automation
-- Most of the daily-use features I depend on
-
-**What might be quirky:**
-
-- The autonomous monitoring (new, needs more testing)
-- Complex task workflows (works, but UX could be better)
-- Performance with massive projects (it's good, but not tested at enterprise scale)
-- Setup process (functional, but could be smoother)
-
-**What I'm genuinely curious about:**
-
-- Is this actually useful to other developers?
-- Are there better patterns I should be using?
-- Should this be one big server or split into smaller focused ones?
-- What features are missing that would make this indispensable?
-
-## Getting Started (The Actually Quick Version)
-
-**Prerequisites:** Node.js 18+, Claude Desktop, and 5 minutes
-
+### Installation
 ```bash
-# Clone and setup
-git clone https://github.com/Baebu/context-savvy-mcp.git
-cd context-savvy-mcp
-npm install
+# Clone the repository
+git clone https://github.com/yourusername/UnifiedVR.git
+cd UnifiedVR
 
-# One-command setup (handles everything)
-npm run quick-setup
+# Build the system
+scripts\build.bat
+
+# Install OpenVR driver
+scripts\install_driver.bat
+
+# Run system tests
+scripts\test_system.bat
 ```
 
-The setup script will:
+### Unity Setup
+1. Create new Unity project (2022.3+)
+2. Copy `Platforms/Unity/Scripts/` to your project
+3. Copy `build/bin/UnifiedVRPlugin.dll` to `Assets/Plugins/`
+4. Add `UnifiedVRManager` component to scene
+5. Configure network settings and hardware
 
-- Build the project ⚙️
-- Create example configurations 📝
-- Run tests to make sure everything works ✅
-- Show you exactly what to add to Claude Desktop 📋
+### Quest 2 Setup
+1. Enable Developer Mode on Quest 2
+2. Build and deploy `Platforms/Quest2/` Unity project
+3. Configure server IP in Quest app
+4. Connect to same WiFi network as PC
 
-**Add to Claude Desktop config:**
+## 📋 Hardware Setup Guide
 
+### 1. Lighthouse Base Stations
+```
+📍 Placement Guidelines:
+• Mount 2-2.5m high at opposite corners
+• Angle down 30-45° toward play area  
+• 5-6m maximum distance apart
+• Set channels: one to 'b', other to 'c'
+• Ensure stable mounting (no vibration)
+```
+
+### 2. Index Controllers
+```
+🎮 Controller Setup:
+• Requires 2x USB dongles (pre-flashed)
+• Plug dongles into USB 3.0 ports
+• Pair through SteamVR room setup
+• Verify finger tracking and haptics
+• Battery life: ~7 hours per charge
+```
+
+### 3. Vive Trackers
+```
+📡 Tracker Configuration:
+• 1 USB dongle per tracker (up to 8)
+• Attach to body parts or objects
+• Common placements: waist, feet, elbows
+• Ensure line-of-sight to base stations
+• Battery life: 6-8 hours per charge
+```
+
+### 4. Network Optimization
+```
+🌐 WiFi Configuration:
+• Dedicated 5GHz or 6GHz network
+• 160MHz channel width (WiFi 6)
+• QoS enabled with VR traffic priority
+• Router positioned for line-of-sight
+• Wired connection for PC preferred
+```
+
+## 🔧 Configuration
+
+### Driver Configuration (`config/driver_config.json`)
 ```json
 {
-  "mcpServers": {
-    "context-server": {
-      "command": "node",
-      "args": ["/path/to/your/context-savvy-mcp/dist/index.js"],
-      "env": {
-        "MCP_SERVER_CONFIG_PATH": "/path/to/your/context-savvy-mcp/config/server.yaml"
-      }
-    }
+  "wireless": {
+    "streamingPort": 9943,
+    "maxBitrate": 300000000,
+    "enableFoveatedRendering": true,
+    "targetLatency": 20
+  },
+  "tracking": {
+    "enableDriftCorrection": true,
+    "calibrationFile": "calibration.json",
+    "trackingRate": 1000,
+    "predictionTime": 0.02
+  },
+  "display": {
+    "renderWidth": 2160,
+    "renderHeight": 2160,
+    "refreshRate": 90,
+    "enableAsyncTimeWarp": true
   }
 }
 ```
 
-Restart Claude Desktop, and you're off to the races.
+### Unity Integration
+```csharp
+// Basic setup
+public UnifiedVRManager unifiedVR;
 
-## What You Can Do With It
-
-### Memory & Context
-
-- **Store anything:** Project notes, decisions, preferences, todo lists
-- **Smart search:** Natural language queries across all your stored context
-- **Relationship mapping:** Connect related ideas, files, and projects automatically
-- **Learning:** The system gets better at understanding your work patterns
-
-### File & Project Management
-
-- **Intelligent reading:** Handles large files, multiple formats, smart truncation
-- **Context-aware editing:** Find/replace with understanding of your code patterns
-- **Project analysis:** Comprehensive overviews with actionable insights
-- **Workspace organization:** Multiple project support with smart switching
-
-### Secure Automation
-
-- **Safe command execution:** Whitelist-based security with path restrictions
-- **Process management:** Monitor and control background tasks
-- **System health:** Real-time performance monitoring and optimization
-- **Backup management:** Automatic file versioning and recovery
-
-### Task & Workflow Management
-
-- **Smart task creation:** Context-aware task tracking with automatic tagging
-- **Workflow automation:** Learn and automate your common patterns
-- **Progress tracking:** Persistent task state across conversations
-- **Template system:** Reusable workflows for common project types
-
-## The Architecture (For Fellow Code Nerds)
-
-Built with clean architecture principles because I have opinions about code organization:
-
-```
-src/
-├── core/           # Pure business logic, no dependencies
-├── application/    # Use cases, services, workflows
-├── infrastructure/ # Database, file system, external APIs
-└── presentation/   # MCP protocol interface
+void Start() {
+    // Initialize system
+    unifiedVR.Initialize();
+    
+    // Configure wireless streaming
+    unifiedVR.wirelessStreamingPort = 9943;
+    unifiedVR.enableWirelessStreaming = true;
+    
+    // Set play area
+    unifiedVR.SetPlayAreaSize(4f, 4f);
+    
+    // Start streaming
+    unifiedVR.StartWirelessStreaming();
+}
 ```
 
-**Tech stack:** TypeScript, SQLite, TensorFlow.js (for embeddings), Dependency Injection, way too much attention to detail.
+## 📊 Performance Monitoring
 
-**Design philosophy:** Make it work first, make it elegant second, make it fast third. Currently somewhere between steps 2 and 3.
+The system includes comprehensive performance monitoring:
 
-## Security (Because I'm Paranoid)
+### Real-time Metrics
+- Frame time and FPS tracking
+- Network latency measurement  
+- Tracking quality assessment
+- Memory usage monitoring
+- Device connection status
 
-This server operates on a "trust but verify" model, configured entirely by you. There are no runtime pop-ups or consent dialogs; security is handled by your `config/server.yaml` file.
-
-- **Command Whitelisting:** Only commands explicitly listed in your configuration's `allowedCommands` can be executed. Everything else is blocked by default.
-- **Path Sandboxing (Safe Zones):** File operations are restricted to directories you define in `safezones`. By default, this is "recursive," meaning subdirectories are also accessible.
-- **Restricted Zones:** The server maintains a list of sensitive system paths (`/etc`, `C:\Windows`, etc.) and project paths (`.git`, `.ssh`) that are always blocked, even if they fall within a safe zone.
-- **Input Validation:** All file paths and command arguments are sanitized to prevent common injection and path traversal attacks.
-
-The default config is locked down tight. You explicitly allow what you want, giving you full control over the server's capabilities.
-
-## Want to Help? 🤝
-
-**I'm genuinely looking for:**
-
-- **Testing:** Try it with your projects, break it, tell me what happens
-- **Code review:** I have blind spots, you probably see them
-- **Ideas:** What features would make this indispensable for you?
-- **Documentation:** If something doesn't make sense, let me know
-- **Real-world feedback:** Does this actually solve problems you have?
-
-**Good first contributions:**
-
-- Try the setup process and document any friction
-- Test with different project types and report what works/doesn't
-- Add support for your favorite tools or languages
-- Improve error messages and UX
-- Write tests for edge cases I missed
-
-**To contribute:**
-
+### Performance Tools
 ```bash
-# Fork on GitHub, then:
-git clone https://github.com/YOUR_USERNAME/context-savvy-mcp.git
-cd context-savvy-mcp
-npm install
-npm test    # Make sure everything works
-npm run dev # Start hacking
+# Launch performance monitor
+Tools\Monitor\Monitor.exe
+
+# Generate performance report
+Tools\Monitor\Monitor.exe --report --duration 300
+
+# Export metrics to CSV
+Tools\Monitor\Monitor.exe --export metrics.csv
 ```
 
-## Configuration & Customization
+### Optimization Recommendations
+The system automatically provides optimization suggestions:
+- Network configuration improvements
+- Hardware placement recommendations
+- Quality setting adjustments
+- System resource optimization
 
-The system is controlled by `config/server.yaml`. Here's what you can tune:
+## 🎯 Calibration Process
 
-```yaml
-# Security boundaries
-security:
-  allowedCommands: ['ls', 'git status', 'npm test']
-  safezones: ['~/projects/my-web-app', './workspace']
+### Automatic Calibration
+1. **Connect Devices**: Ensure all hardware is connected and tracked
+2. **Start Calibration**: Press `C` or use Unity interface
+3. **Collect Points**: Move around with paired devices simultaneously
+4. **Wait for Completion**: System automatically computes transform
+5. **Validation**: Test accuracy and save calibration
 
-# Database and storage
-database:
-  path: './data/context.db'
-  backupInterval: 360 # In minutes. 0 to disable.
+### Manual Calibration
+```csharp
+// Start calibration programmatically
+unifiedVR.StartCalibration();
 
-# Semantic search features
-semanticSearch:
-  enabled: true
-  model: 'universal-sentence-encoder'
+// Check completion status
+if (unifiedVR.IsCalibrationComplete()) {
+    unifiedVR.SaveCalibration();
+}
 
-# Autonomous behaviors
-autonomous:
-  enabled: true
-  monitoring:
-    compressionThreshold: 10240 # In bytes. Auto-compress contexts larger than this.
-    panicThreshold: 0.95 # Trigger emergency state save at 95% of context window.
+// Load existing calibration
+unifiedVR.LoadCalibration();
 ```
 
-Run `npm run config` for a web-based configuration UI. For a full breakdown of options, see the [Installation Guide](./INSTALLATION.md).
+### Drift Correction
+The system includes continuous drift correction:
+- Real-time tracking comparison
+- Automatic adjustment algorithms
+- Configurable correction thresholds
+- Manual recalibration triggers
 
-## Performance & Scaling
+## 🤝 API Reference
 
-**Tested with:**
+### Core Components
 
-- Projects up to 10,000 files
-- Context databases up to 1GB
-- Concurrent conversations (works, but not heavily tested)
-- Long-running sessions (months of continuous use)
+#### UnifiedVRManager
+```csharp
+public class UnifiedVRManager : MonoBehaviour {
+    // System Control
+    public bool Initialize();
+    public void Shutdown();
+    
+    // Wireless Streaming
+    public bool StartWirelessStreaming();
+    public void StopWirelessStreaming();
+    public bool IsWirelessConnected();
+    
+    // Device Management
+    public DeviceInfo[] GetDevices();
+    public bool GetDevicePose(int deviceId, out Pose pose);
+    public bool GetDeviceInput(int deviceId, out InputState input);
+    
+    // Calibration
+    public bool StartCalibration();
+    public bool IsCalibrationComplete();
+    public void SaveCalibration();
+    public void LoadCalibration();
+    
+    // Events
+    public event Action<DeviceInfo> OnDeviceConnected;
+    public event Action<int> OnDeviceDisconnected;
+    public event Action OnCalibrationComplete;
+}
+```
 
-**Optimization features:**
+#### VRHandTracker
+```csharp
+public class VRHandTracker : MonoBehaviour {
+    // Hand State
+    public bool IsTracking { get; }
+    public Vector3 HandPosition { get; }
+    public Quaternion HandRotation { get; }
+    public HandGesture CurrentGesture { get; }
+    
+    // Interaction
+    public bool IsPinching { get; }
+    public bool IsGrasping { get; }
+    public GameObject GrabbedObject { get; }
+    
+    // Finger Tracking
+    public float GetFingerCurl(int fingerIndex);
+    public Vector3 GetFingerTipPosition(int fingerIndex);
+    
+    // Events
+    public event Action<HandGesture> OnGestureRecognized;
+    public event Action<GameObject> OnObjectGrabbed;
+    public event Action<GameObject> OnObjectReleased;
+}
+```
 
-- Intelligent compression and archiving
-- Semantic deduplication
-- Background maintenance
-- Connection pooling and caching
+## 🐛 Troubleshooting
 
-## The Honest FAQ
+### Common Issues
 
-**Q: Is this production-ready?**
-A: For personal use? Absolutely. For enterprise? Probably needs more testing and hardening.
+#### Driver Not Loading
+```bash
+# Check SteamVR logs
+type "%LOCALAPPDATA%\openvr\vrserver.txt"
 
-**Q: Why not use [existing solution]?**
-A: I tried. Nothing gave me the exact combination of persistence, security, and workflow integration I wanted.
+# Verify driver installation
+scripts\test_system.bat
 
-**Q: Will this slow down Claude?**
-A: In my experience, no. The context loading is fast, and having persistent memory actually makes conversations more efficient.
+# Enable multiple drivers in SteamVR settings
+# Developer > "Activate Multiple Drivers" = ON
+```
 
-**Q: What if I find bugs?**
-A: Please report them! I use this daily, so bugs get fixed quickly.
+#### Poor Wireless Performance
+```bash
+# Check network configuration
+ipconfig /all
+ping [quest-ip-address]
 
-**Q: Can I use this for commercial projects?**
-A: MIT license, so yes. Just don't blame me if something breaks.
+# Optimize WiFi settings
+# - Use 5GHz dedicated network
+# - Set channel width to 160MHz
+# - Enable QoS for VR traffic
+```
 
-## What's Next
+#### Tracking Issues
+```bash
+# Recalibrate tracking system
+# - Press 'C' in Unity scene
+# - Follow calibration instructions
+# - Ensure line-of-sight to base stations
 
-**Near-term roadmap:**
+# Check device connections
+# - Verify all devices show in SteamVR
+# - Test tracking coverage in play area
+# - Update base station firmware
+```
 
-- Better onboarding and setup experience
-- More intelligent autonomous behaviors
-- Plugin system for custom tools
-- Improved performance monitoring
-- Better mobile/web interface options
+### Performance Optimization
 
-**Longer-term possibilities:**
+#### Network Optimization
+- **Router Placement**: Position for direct line-of-sight
+- **Channel Selection**: Use WiFi analyzer to find clear channels
+- **QoS Configuration**: Prioritize VR traffic over other devices
+- **Bandwidth Allocation**: Reserve 300+ Mbps for VR streaming
 
-- Multi-user support
-- Cloud synchronization
-- Advanced workflow automation
-- Integration with more development tools
-- AI model fine-tuning on your patterns
+#### System Optimization
+- **GPU Performance**: Set to maximum performance mode
+- **CPU Priority**: High priority for UnifiedVR processes
+- **Memory Management**: Ensure 8GB+ available
+- **Background Apps**: Close unnecessary applications
 
-## Support & Community
+## 📈 Development Roadmap
 
-- 📖 **Docs:** [Installation Guide](./INSTALLATION.md) • [Configuration](./CLAUDE_DESKTOP_CONFIG.md)
-- 🐛 **Issues:** [Report bugs and request features](https://github.com/Baebu/context-savvy-mcp/issues)
-- 💬 **Discussions:** [Share ideas and get help](https://github.com/Baebu/context-savvy-mcp/discussions)
-- 📧 **Direct:** Open an issue if you need help or want to chat
+### Current Version (v1.0)
+- ✅ Basic wireless streaming
+- ✅ Mixed tracking system integration
+- ✅ Unity plugin with C# APIs
+- ✅ Performance monitoring tools
+- ✅ Automatic calibration system
 
-## 💙 Support This Project
+### Upcoming Features (v1.1)
+- 🔄 Eye tracking integration (Quest Pro)
+- 🔄 Facial tracking support
+- 🔄 Advanced gesture recognition
+- 🔄 Multi-user support
+- 🔄 Cloud calibration sync
 
-This project is a labor of love, built with too much coffee and stubborn determination. If Context Savvy MCP makes your AI interactions better, consider supporting its development:
+### Future Plans (v2.0)
+- 📋 AR passthrough integration
+- 📋 AI-powered optimization
+- 📋 Wireless base station support
+- 📋 Cross-platform compatibility (Linux/Mac)
+- 📋 WebXR integration
 
-- ☕ **[Buy me a coffee on Ko-fi](https://ko-fi.com/baecentric)** - Keep the caffeine-fueled coding sessions going
-- ⭐ **Star the repository** - It genuinely motivates continued development
-- 🐛 **Report bugs** - Help make it better for everyone
-- 💡 **Share ideas** - Your feedback shapes the roadmap
-- 🤝 **Contribute code** - Join the development effort
+## 🤝 Contributing
 
-Every cup of coffee, every star, every contribution helps keep this project alive and growing. **Thank you for being part of the journey!**
+We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
-## License & Acknowledgments
+### Development Setup
+```bash
+# Fork and clone the repository  
+git clone https://github.com/yourusername/UnifiedVR.git
 
-MIT License - do whatever you want with it.
+# Create development branch
+git checkout -b feature/your-feature-name
 
-**Built on the shoulders of:**
+# Make changes and test
+scripts\build.bat
+scripts\test_system.bat
 
-- [Model Context Protocol](https://modelcontextprotocol.io/) - The foundation that makes this possible
-- [Anthropic](https://www.anthropic.com/) - For Claude and the ecosystem
-- [Claude Desktop community](https://discord.gg/anthropic) - For inspiration and feedback
-- Excessive amounts of coffee ☕ - For making late-night coding sessions bearable
+# Submit pull request
+```
+
+### Areas for Contribution
+- Performance optimization algorithms
+- Additional hardware support
+- Cross-platform compatibility
+- Documentation improvements
+- Bug fixes and testing
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🙏 Acknowledgments
+
+- **Valve Software** - OpenVR SDK and SteamVR ecosystem
+- **Meta** - Quest development platform and OpenXR SDK
+- **HTC** - Vive tracker hardware and development resources
+- **Collabora** - libsurvive open-source tracking library
+- **Unity Technologies** - XR development platform
+- **VR Community** - Invaluable feedback and testing
+
+## 🔗 Links
+
+- **Documentation**: [Full Documentation](./SETUP_GUIDE.md)
+- **API Reference**: [API Documentation](./docs/API.md)
+- **Troubleshooting**: [Troubleshooting Guide](./docs/TROUBLESHOOTING.md)
+- **Discord**: [Community Discord Server](#)
+- **YouTube**: [Setup and Demo Videos](#)
+
+## 📞 Support
+
+- **Issues**: [GitHub Issues](https://github.com/yourusername/UnifiedVR/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/yourusername/UnifiedVR/discussions)
+- **Email**: support@unifiedvr.dev
+- **Discord**: Join our community server for real-time help
 
 ---
 
-**Made with ❤️ and stubborn determination**
+**Made with ❤️ for the VR community**
 
-_If this makes your AI interactions even 10% better, it was worth building._
+*Bringing together the best of wireless freedom and precision tracking*
