@@ -117,8 +117,7 @@ export class MigrationExecutor {
       const hasSemanticTags = contextColumns.some((col: any) => col.name === 'semantic_tags');
       const hasContextType = contextColumns.some((col: any) => col.name === 'context_type');
 
-      // Check if vector storage columns exist (from 002_vector_storage_and_enhanced_context.sql)
-      const hasEmbeddingVector = contextColumns.some((col: any) => col.name === 'embedding_vector');
+      // Check if vector storage columns exist (from 001_initial_semantic_features.sql)
       const hasRelevanceScore = contextColumns.some((col: any) => col.name === 'relevance_score');
 
       return {
@@ -128,8 +127,8 @@ export class MigrationExecutor {
           hasEmbedding,
           hasSemanticTags,
           hasContextType,
-          hasVectorStorage: hasEmbeddingVector && hasRelevanceScore,
-          isComplete: hasEmbedding && hasSemanticTags && hasContextType && hasEmbeddingVector && hasRelevanceScore // Assuming all are needed for "complete"
+          hasVectorStorage: hasEmbedding && hasRelevanceScore,
+          isComplete: hasEmbedding && hasSemanticTags && hasContextType && hasRelevanceScore
         },
         migrations
       };

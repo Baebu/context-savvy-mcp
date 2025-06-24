@@ -662,13 +662,23 @@ export class EnhancedCLIAdapter extends EventEmitter implements IEnhancedCLIHand
     for (const [_processId, processInfo] of this.processes) {
       if (processInfo.status !== 'running') continue;
 
-      // Simulate resource usage for individual processes.
-      // In a real scenario, this would involve platform-specific calls or a library like 'pidusage'.
-      const simulatedMemory = Math.floor(Math.random() * (this.limits.maxProcessMemoryMB * 0.8)) + 10; // 10MB to 80% of max
-      const simulatedCpu = parseFloat((Math.random() * (this.limits.maxProcessCpuPercent * 0.7) + 5).toFixed(1)); // 5% to 70% of max
-
-      processInfo.memoryUsage = simulatedMemory;
-      processInfo.cpuUsage = simulatedCpu;
+      // Get actual resource usage for child processes
+      try {
+        const resourceUsage = await this.getProcessResourceUsage(processInfo.pid);
+        processInfo.memoryUsage = resourceUsage.memory;
+        processInfo.cpuUsage = resourceUsage.cpu;
+      } catch (error) {
+        // Fallback to basic estimation if platform-specific monitoring fails
+        logger.debug(`Resource monitoring failed for PID ${processInfo.pid}, using fallback: ${String(error)}`);
+        
+        // Use process runtime as a basic heuristic for resource estimation
+        const runtime = Date.now() - processInfo.startTime.getTime();
+        const baseMemory = 20; // Base memory estimate in MB
+        const runtimeMemory = Math.min(runtime / 60000 * 5, 50); // Add 5MB per minute, max 50MB
+        
+        processInfo.memoryUsage = Math.floor(baseMemory + runtimeMemory);
+        processInfo.cpuUsage = 0; // Cannot estimate CPU reliably without proper monitoring
+      }
 
       // Check memory limits
       if (processInfo.memoryUsage > processInfo.maxMemoryMB) {
@@ -683,6 +693,90 @@ export class EnhancedCLIAdapter extends EventEmitter implements IEnhancedCLIHand
       if (processInfo.cpuUsage > processInfo.maxProcessCpuPercent) {
         logger.warn(`Process ${processInfo.id} high CPU usage: ${processInfo.cpuUsage.toFixed(1)}%`);
       }
+    }
+  }
+
+  private async getProcessResourceUsage(pid: number): Promise<{ memory: number; cpu: number }> {
+    const platform = process.platform;
+    
+    try {
+      if (platform === 'win32') {
+        return await this.getWindowsProcessUsage(pid);
+      } else if (platform === 'darwin') {
+        return await this.getMacOSProcessUsage(pid);
+      } else {
+        return await this.getLinuxProcessUsage(pid);
+      }
+    } catch (error) {
+      throw new Error(`Platform-specific resource monitoring failed: ${String(error)}`);
+    }
+  }
+
+  private async getWindowsProcessUsage(pid: number): Promise<{ memory: number; cpu: number }> {
+    const { exec } = await import('node:child_process');
+    const { promisify } = await import('node:util');
+    const execAsync = promisify(exec);
+
+    try {
+      // Use PowerShell to get process info (memory in KB, CPU percentage)
+      const { stdout } = await execAsync(
+        `powershell -Command "Get-Process -Id ${pid} | Select-Object WorkingSet,CPU | ConvertTo-Json"`,
+        { timeout: 5000 }
+      );
+      
+      const processData = JSON.parse(stdout.trim());
+      const memoryMB = Math.round((processData.WorkingSet || 0) / 1024 / 1024);
+      const cpuPercent = parseFloat(processData.CPU || '0');
+      
+      return { memory: memoryMB, cpu: cpuPercent };
+    } catch (error) {
+      throw new Error(`Windows process monitoring failed: ${String(error)}`);
+    }
+  }
+
+  private async getMacOSProcessUsage(pid: number): Promise<{ memory: number; cpu: number }> {
+    const { exec } = await import('node:child_process');
+    const { promisify } = await import('node:util');
+    const execAsync = promisify(exec);
+
+    try {
+      // Use ps command to get memory (RSS in KB) and CPU percentage
+      const { stdout } = await execAsync(`ps -p ${pid} -o rss=,pcpu=`, { timeout: 5000 });
+      
+      const parts = stdout.trim().split(/\s+/);
+      const memoryKB = parseInt(parts[0] || '0', 10);
+      const cpuPercent = parseFloat(parts[1] || '0');
+      
+      return { memory: Math.round(memoryKB / 1024), cpu: cpuPercent };
+    } catch (error) {
+      throw new Error(`macOS process monitoring failed: ${String(error)}`);
+    }
+  }
+
+  private async getLinuxProcessUsage(pid: number): Promise<{ memory: number; cpu: number }> {
+    const { readFile } = await import('node:fs/promises');
+    
+    try {
+      // Read from /proc filesystem for memory and CPU info
+      const statContent = await readFile(`/proc/${pid}/stat`, 'utf8');
+      const statusContent = await readFile(`/proc/${pid}/status`, 'utf8');
+      
+      // Parse memory from status file (VmRSS line)
+      const vmRssMatch = statusContent.match(/VmRSS:\s+(\d+)\s+kB/);
+      const memoryKB = vmRssMatch ? parseInt(vmRssMatch[1], 10) : 0;
+      
+      // Parse CPU times from stat file (simplified calculation)
+      const statParts = statContent.split(' ');
+      const utime = parseInt(statParts[13] || '0', 10);
+      const stime = parseInt(statParts[14] || '0', 10);
+      const totalTime = utime + stime;
+      
+      // Simple CPU percentage estimate (would need more complex calculation for accuracy)
+      const cpuPercent = totalTime > 0 ? Math.min(totalTime / 100, 100) : 0;
+      
+      return { memory: Math.round(memoryKB / 1024), cpu: cpuPercent };
+    } catch (error) {
+      throw new Error(`Linux process monitoring failed: ${String(error)}`);
     }
   }
 

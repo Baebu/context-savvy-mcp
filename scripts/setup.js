@@ -130,7 +130,7 @@ async function main() {
     
     // Show Claude Desktop configuration
     const projectRoot = path.dirname(__dirname);
-    const distPath = path.resolve(projectRoot, 'dist', 'index.js');
+    const distPath = path.resolve(projectRoot, 'build', 'index.js');
     const configPath = path.resolve(projectRoot, 'config', 'server.yaml');
     
     log('📋 Add this to your claude_desktop_config.json:', colors.cyan);

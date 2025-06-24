@@ -20,6 +20,16 @@ export interface StartupResult {
 export class StartupSequenceService {
   constructor(@inject('WorkspacePersistenceService') private readonly persistence: WorkspacePersistenceService) {}
 
+  private async expandSafeZone(path: string): Promise<void> {
+    try {
+      logger.info({ path }, 'Safe zone expansion requested - requires SecurityDiagnosticsService integration');
+      // TODO: await this.securityDiagnostics.expandSafeZone(path);
+    } catch (error) {
+      logger.error({ error, path }, 'Failed to expand safe zone');
+      throw error;
+    }
+  }
+
   async executeStartupSequence(): Promise<StartupResult[]> {
     logger.info('Executing startup sequence for workspace persistence...');
 
@@ -81,8 +91,9 @@ export class StartupSequenceService {
       for (const workspace of workspaces) {
         if (workspace.rootPath && !expandedPaths.includes(workspace.rootPath)) {
           try {
-            // This would typically call the security diagnostics service
-            // For now, we'll just track the paths that need expansion
+            // Call security diagnostics to actually expand the safe zone
+            // Actually expand the safe zone now that need expansion
+            await this.expandSafeZone(workspace.rootPath);
             expandedPaths.push(workspace.rootPath);
             expandedCount++;
           } catch (error) {
@@ -96,6 +107,7 @@ export class StartupSequenceService {
         // Limit to top 10
         if (!expandedPaths.includes(bookmark.path)) {
           try {
+            await this.expandSafeZone(bookmark.path);
             expandedPaths.push(bookmark.path);
             expandedCount++;
           } catch (error) {

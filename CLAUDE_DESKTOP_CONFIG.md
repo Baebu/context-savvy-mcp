@@ -24,7 +24,7 @@ Add the following to your `claude_desktop_config.json` file. **Replace the paths
 "mcpServers": {
 "context-server": {
 "command": "node",
-"args": ["/absolute/path/to/context-savvy-mcp/dist/index.js"],
+"args": ["/absolute/path/to/context-savvy-mcp/build/index.js"],
 "env": {
 "MCP_LOG_LEVEL": "info",
 "MCP_SERVER_CONFIG_PATH": "/absolute/path/to/context-savvy-mcp/config/server.yaml"
@@ -35,7 +35,7 @@ Add the following to your `claude_desktop_config.json` file. **Replace the paths
 
 ## Important Notes
 
-1. **Replace paths**: - Change `/absolute/path/to/context-savvy-mcp/dist/index.js` to the actual absolute path where you cloned this repository and built the project (specifically, the `dist/index.js` file).
+1. **Replace paths**: - Change `/absolute/path/to/context-savvy-mcp/build/index.js` to the actual absolute path where you cloned this repository and built the project (specifically, the `build/index.js` file).
 
    - Change `/absolute/path/to/context-savvy-mcp/config/server.yaml` to the actual absolute path of your server's configuration file (e.g., `server.yaml`). This file tells the MCP server itself how to behave (security settings, database path, etc.).
 
@@ -55,7 +55,7 @@ If you have other MCP servers, your configuration might look like this:
 "mcpServers": {
 "context-server": {
 "command": "node",
-"args": ["/Users/yourname/projects/context-savvy-mcp/dist/index.js"],
+"args": ["/Users/yourname/projects/context-savvy-mcp/build/index.js"],
 "env": {
 "MCP_LOG_LEVEL": "info",
 "MCP_SERVER_CONFIG_PATH": "/Users/yourname/projects/context-savvy-mcp/config/server.yaml"

@@ -180,15 +180,15 @@ export class SemanticDatabaseExtension {
     similarityScore?: number
   ): Promise<void> {
     try {
-      const relationshipId = `${sourceKey}-${targetKey}-${relationshipType}`;
+
 
       const stmt = this.db.prepare(`
         INSERT OR REPLACE INTO context_relationships
-        (id, source_key, target_key, relationship_type, similarity_score, created_at)
-        VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+        (source_context_id, target_context_id, relationship_type, similarity_score, created_at)
+        VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
       `);
 
-      stmt.run(relationshipId, sourceKey, targetKey, relationshipType, similarityScore || null);
+      stmt.run(sourceKey, targetKey, relationshipType, similarityScore || null);
 
       logger.debug(
         {
@@ -212,14 +212,14 @@ export class SemanticDatabaseExtension {
     try {
       const stmt = this.db.prepare(`
         SELECT * FROM context_relationships
-        WHERE source_key = ? OR target_key = ?
+        WHERE source_context_id = ? OR target_context_id = ?
         ORDER BY similarity_score DESC, created_at DESC
       `);
 
       const rows = stmt.all(key, key) as Array<{
         id: string;
-        source_key: string;
-        target_key: string;
+        source_context_id: string;
+        target_context_id: string;
         relationship_type: string;
         similarity_score: number | null;
         created_at: string;
@@ -227,8 +227,8 @@ export class SemanticDatabaseExtension {
 
       return rows.map(row => ({
         id: row.id,
-        sourceKey: row.source_key,
-        targetKey: row.target_key,
+        sourceKey: row.source_context_id,
+        targetKey: row.target_context_id,
         relationshipType: row.relationship_type as any,
         similarityScore: row.similarity_score || undefined,
         createdAt: new Date(row.created_at)

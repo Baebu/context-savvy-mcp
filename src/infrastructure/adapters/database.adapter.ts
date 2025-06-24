@@ -197,16 +197,16 @@ export class DatabaseAdapter implements IDatabaseHandler {
       this.db.exec(`
         CREATE TABLE IF NOT EXISTS context_relationships (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
-          source_key TEXT NOT NULL,
-          target_key TEXT NOT NULL,
+          source_context_id TEXT NOT NULL,
+          target_context_id TEXT NOT NULL,
           relationship_type TEXT NOT NULL,
-          strength REAL DEFAULT 1.0,
+          similarity_score REAL DEFAULT 0.0,
           created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-          UNIQUE(source_key, target_key, relationship_type)
+          UNIQUE(source_context_id, target_context_id, relationship_type)
         );
 
-        CREATE INDEX IF NOT EXISTS idx_relationships_source ON context_relationships(source_key);
-        CREATE INDEX IF NOT EXISTS idx_relationships_target ON context_relationships(target_key);
+        CREATE INDEX IF NOT EXISTS idx_relationships_source ON context_relationships(source_context_id);
+        CREATE INDEX IF NOT EXISTS idx_relationships_target ON context_relationships(target_context_id);
         CREATE INDEX IF NOT EXISTS idx_relationships_type ON context_relationships(relationship_type);
       `);
     } catch (error) {
@@ -1081,7 +1081,7 @@ export class DatabaseAdapter implements IDatabaseHandler {
     try {
       const stmt = this.db.prepare(`
         INSERT OR REPLACE INTO context_relationships
-        (source_key, target_key, relationship_type, strength)
+        (source_context_id, target_context_id, relationship_type, similarity_score)
         VALUES (?, ?, ?, ?)
       `);
       stmt.run(sourceKey, targetKey, relationshipType, strength);
@@ -1097,9 +1097,9 @@ export class DatabaseAdapter implements IDatabaseHandler {
   ): Promise<import('../../core/interfaces/database.interface.js').ContextRelationship[]> {
     try {
       const stmt = this.db.prepare(`
-        SELECT target_key, relationship_type, strength, created_at
+        SELECT target_context_id, relationship_type, similarity_score, created_at
         FROM context_relationships
-        WHERE source_key = ?
+        WHERE source_context_id = ?
         ORDER BY strength DESC, created_at DESC
       `);
       const rows = stmt.all(key) as any[];
@@ -1120,7 +1120,7 @@ export class DatabaseAdapter implements IDatabaseHandler {
     try {
       const stmt = this.db.prepare(`
         DELETE FROM context_relationships
-        WHERE source_key = ? AND target_key = ? AND relationship_type = ?
+        WHERE source_context_id = ? AND target_context_id = ? AND relationship_type = ?
       `);
       const result = stmt.run(sourceKey, targetKey, relationshipType);
       logger.debug(

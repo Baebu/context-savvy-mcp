@@ -7,8 +7,8 @@ set -e
 echo "🔨 Building MCP Context Server..."
 
 # Clean previous build
-if [ -d "dist" ]; then
-    rm -rf dist
+if [ -d "build" ]; then
+    rm -rf build
 fi
 
 # Install dependencies
@@ -24,8 +24,8 @@ npm run build
 
 # Copy non-TS files
 echo "📋 Copying configuration files..."
-mkdir -p dist/config
-cp config/*.example.* dist/config/ 2>/dev/null || true
+mkdir -p build/config
+cp config/*.example.* build/config/ 2>/dev/null || true
 
-echo "✅ Build complete! Output in ./dist/"
-echo "🚀 Run with: node dist/index.js"
+echo "✅ Build complete! Output in ./build/"
+echo "🚀 Run with: node build/index.js"
