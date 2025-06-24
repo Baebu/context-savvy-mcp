@@ -21,7 +21,7 @@ export class QueueManager {
       logger.debug({ queue: name, size: queue.size, pending: queue.pending }, 'Queue active');
     });
 
-    queue.on('error', error => {
+    queue.on('error', (error: any) => {
       logger.error({ error, queue: name }, 'Queue error');
     });
 

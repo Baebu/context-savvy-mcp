@@ -1,6 +1,6 @@
 {
-  "name": "context-savy-server",
-  "version": "2.0.0",
+  "name": "context-savvy-mcp",
+  "version": "2.1.0",
   "description": "Advanced Model Context Protocol (MCP) Server with comprehensive context management, semantic search, and intelligent workflow automation",
   "main": "build/index.js",
   "type": "module",
@@ -17,7 +17,7 @@
     "format": "prettier --write \"src/**/*.ts\"",
     "setup": "node ./scripts/setup.js",
     "health-check": "node ./scripts/health-check.js",
-    "quick-setup": "node ./scripts/quick-setup.js",
+
     "clean": "rimraf build dist coverage",
     "prebuild": "npm run clean",
     "prepublishOnly": "npm run build"
@@ -33,7 +33,7 @@
     "claude",
     "anthropic"
   ],
-  "author": "Context-Savy Development Team",
+  "author": "Context Savvy Development Team",
   "license": "MIT",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.12.3",
@@ -56,7 +56,8 @@
     "ws": "^8.17.0",
     "yaml": "^2.4.2",
     "zod": "^3.23.8",
-    "zod-to-json-schema": "^3.24.5"
+    "zod-to-json-schema": "^3.24.5",
+    "meriyah": "^6.1.0"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.13",
@@ -87,12 +88,12 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/your-username/context-savy-server.git"
+    "url": "git+https://github.com/Baebu/context-savvy-mcp.git"
   },
   "bugs": {
-    "url": "https://github.com/your-username/context-savy-server/issues"
+    "url": "https://github.com/Baebu/context-savvy-mcp/issues"
   },
-  "homepage": "https://github.com/your-username/context-savy-server#readme",
+  "homepage": "https://github.com/Baebu/context-savvy-mcp#readme",
   "lint-staged": {
     "*.ts": [
       "eslint --fix",

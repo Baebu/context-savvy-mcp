@@ -67,6 +67,7 @@ npm install && npm run build && npm test
    ```
 
 4. **Start Development**
+
    ```bash
    npm run dev      # Start with file watching
    ```

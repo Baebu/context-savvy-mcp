@@ -22,10 +22,10 @@ function getClaudeDesktopConfigPath() {
 }
 
 async function checkBuild() {
-  const distPath = path.join(projectRoot, 'dist', 'index.js');
+  const buildPath = path.join(projectRoot, 'build', 'index.js');
 
   try {
-    await fs.access(distPath);
+    await fs.access(buildPath);
     return true;
   } catch {
     return false;
@@ -40,8 +40,7 @@ async function generateConfig() {
     console.log('❌ Project not built yet. Run: npm run build\n');
     return;
   }
-
-  const serverExecutablePath = path.resolve(projectRoot, 'dist', 'index.js');
+  const serverExecutablePath = path.resolve(projectRoot, 'build', 'index.js');
   const serverConfigFilePath = path.resolve(projectRoot, 'config', 'server.yaml'); // Default server config
   const claudeConfigPath = getClaudeDesktopConfigPath();
 

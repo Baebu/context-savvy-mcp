@@ -1,0 +1,49 @@
+# Workspace Persistence Configuration Addon
+# Append this to your existing config/server.yaml
+
+workspacePersistence:
+  enabled: true
+  autoRecovery:
+    enabled: true
+    autoExpandSafeZones: true
+    maxRecentDirectories: 20
+    retentionDays: 30
+  
+  # Directory tracking configuration
+  directoryTracking:
+    enabled: true
+    autoBookmark: true
+    maxBookmarks: 50
+    trackingInterval: 300000  # 5 minutes
+  
+  # Session persistence
+  sessionPersistence:
+    enabled: true
+    saveInterval: 60000  # 1 minute
+    maxSessionHistory: 10
+
+startup:
+  sequence:
+    - name: "expand_safe_zones_from_registry"
+      enabled: true
+      priority: 1
+    - name: "auto_discover_directories"
+      enabled: true
+      priority: 2
+    - name: "restore_last_workspace"
+      enabled: true
+      priority: 3
+
+# Database configuration additions
+database:
+  workspace_persistence:
+    auto_create_tables: true
+    backup_before_migration: true
+    migration_timeout: 30000
+
+# Logging configuration for workspace persistence
+logging:
+  workspace_persistence:
+    level: "info"
+    enabled: true
+    include_stack_trace: false

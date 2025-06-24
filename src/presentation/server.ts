@@ -1,4 +1,4 @@
-import { Server } from '@modelcontextprotocol/sdk/server/index.js'; // Corrected 'mport' to 'import'
+import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import {
   ListToolsRequestSchema,
@@ -138,10 +138,8 @@ export class MCPContextServer {
       };
 
       return result;
-    });
-
-    // Register tools/call handler
-    this.mcpServer.setRequestHandler(CallToolRequestSchema, async request => {
+    }); // Register tools/call handler
+    this.mcpServer.setRequestHandler(CallToolRequestSchema, async (request: any) => {
       const toolName = request.params?.name;
       const tool = tools.find(t => t.name === toolName);
 
@@ -227,7 +225,7 @@ export class MCPContextServer {
       };
     });
 
-    this.mcpServer.setRequestHandler(ReadResourceRequestSchema, async request => {
+    this.mcpServer.setRequestHandler(ReadResourceRequestSchema, async (request: any) => {
       const uri = request.params?.uri;
 
       if (!uri) {
@@ -295,7 +293,7 @@ export class MCPContextServer {
       };
     });
 
-    this.mcpServer.setRequestHandler(GetPromptRequestSchema, async request => {
+    this.mcpServer.setRequestHandler(GetPromptRequestSchema, async (request: any) => {
       const promptName = request.params?.name;
       const prompt = prompts.find(p => p.name === promptName);
 

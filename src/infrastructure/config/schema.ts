@@ -385,6 +385,85 @@ const monitoringConfigSchema = z
   })
   .default({});
 
+// Projects configuration schema
+const projectsConfigSchema = z
+  .object({
+    defaultDirectory: z.string().default('A:/Projects').describe('Default directory for creating new projects'),
+    autoCreateDirectory: z.boolean().default(true).describe('Automatically create the projects directory if it doesn\'t exist'),
+    autoAddToSafeZones: z.boolean().default(true).describe('Automatically add projects directory to security safe zones'),
+    projectStructure: z
+      .object({
+        createGitRepo: z.boolean().default(true).describe('Initialize git repository for new projects'),
+        createReadme: z.boolean().default(true).describe('Create README.md for new projects'),
+        createGitignore: z.boolean().default(true).describe('Create .gitignore for new projects'),
+        defaultDirectories: z.array(z.string()).default(['src', 'docs', 'tests']).describe('Default directories to create in new projects'),
+        templates: z
+          .object({
+            enabled: z.boolean().default(true),
+            directory: z.string().default('./templates').describe('Directory containing project templates'),
+            default: z.string().optional().describe('Default template to use if none specified')
+          })
+          .default({ enabled: true, directory: './templates' })
+      })
+      .default({
+        createGitRepo: true,
+        createReadme: true,
+        createGitignore: true,
+        defaultDirectories: ['src', 'docs', 'tests'],
+        templates: { enabled: true, directory: './templates' }
+      }),
+    naming: z
+      .object({
+        convention: z.enum(['kebab-case', 'snake_case', 'camelCase', 'PascalCase']).default('kebab-case').describe('Naming convention for new projects'),
+        allowSpaces: z.boolean().default(false).describe('Allow spaces in project names'),
+        maxLength: z.number().default(50).describe('Maximum length for project names'),
+        reservedNames: z.array(z.string()).default(['con', 'prn', 'aux', 'nul', 'com1', 'com2', 'com3', 'com4', 'com5', 'com6', 'com7', 'com8', 'com9', 'lpt1', 'lpt2', 'lpt3', 'lpt4', 'lpt5', 'lpt6', 'lpt7', 'lpt8', 'lpt9']).describe('Reserved names that cannot be used for projects')
+      })
+      .default({
+        convention: 'kebab-case',
+        allowSpaces: false,
+        maxLength: 50,
+        reservedNames: ['con', 'prn', 'aux', 'nul', 'com1', 'com2', 'com3', 'com4', 'com5', 'com6', 'com7', 'com8', 'com9', 'lpt1', 'lpt2', 'lpt3', 'lpt4', 'lpt5', 'lpt6', 'lpt7', 'lpt8', 'lpt9']
+      }),
+    workspace: z
+      .object({
+        autoCreateWorkspace: z.boolean().default(true).describe('Automatically create workspace for new projects'),
+        autoActivateWorkspace: z.boolean().default(true).describe('Automatically activate workspace for new projects'),
+        contextPrefix: z.string().default('project').describe('Default context prefix for project workspaces'),
+        defaultType: z.enum(['project', 'scratch', 'shared']).default('project').describe('Default workspace type for projects')
+      })
+      .default({
+        autoCreateWorkspace: true,
+        autoActivateWorkspace: true,
+        contextPrefix: 'project',
+        defaultType: 'project'
+      })
+  })
+  .default({
+    defaultDirectory: 'A:/Projects',
+    autoCreateDirectory: true,
+    autoAddToSafeZones: true,
+    projectStructure: {
+      createGitRepo: true,
+      createReadme: true,
+      createGitignore: true,
+      defaultDirectories: ['src', 'docs', 'tests'],
+      templates: { enabled: true, directory: './templates' }
+    },
+    naming: {
+      convention: 'kebab-case',
+      allowSpaces: false,
+      maxLength: 50,
+      reservedNames: ['con', 'prn', 'aux', 'nul', 'com1', 'com2', 'com3', 'com4', 'com5', 'com6', 'com7', 'com8', 'com9', 'lpt1', 'lpt2', 'lpt3', 'lpt4', 'lpt5', 'lpt6', 'lpt7', 'lpt8', 'lpt9']
+    },
+    workspace: {
+      autoCreateWorkspace: true,
+      autoActivateWorkspace: true,
+      contextPrefix: 'project',
+      defaultType: 'project'
+    }
+  });
+
 // Main server configuration schema
 export const serverConfigSchema = z.object({
   server: serverDetailsSchema,
@@ -401,11 +480,13 @@ export const serverConfigSchema = z.object({
   // ui: uiConfigSchema.optional(), // REMOVED
   semanticSearch: semanticSearchConfigSchema.optional(),
   backup: backupConfigSchema.optional(),
-  monitoring: monitoringConfigSchema.optional()
+  monitoring: monitoringConfigSchema.optional(),
+  projects: projectsConfigSchema.optional()
 });
 
 // Type inference from schemas
 export type SecurityConfig = z.infer<typeof securityConfigSchema>;
+export type ProjectsConfig = z.infer<typeof projectsConfigSchema>;
 export type ServerConfig = z.infer<typeof serverConfigSchema>;
 
 // Export the main schema also as configSchema for backward compatibility
@@ -424,6 +505,11 @@ export function validatePartialConfig(config: unknown): Partial<ServerConfig> {
 // Security-specific validation
 export function validateSecurityConfig(config: unknown): SecurityConfig {
   return securityConfigSchema.parse(config);
+}
+
+// Projects-specific validation
+export function validateProjectsConfig(config: unknown): ProjectsConfig {
+  return projectsConfigSchema.parse(config);
 }
 
 export function getConfigDefaults(): ServerConfig {
@@ -448,7 +534,8 @@ export function mergeConfigs(base: ServerConfig, override: Partial<ServerConfig>
     // ui: { ...base.ui, ...override.ui }, // REMOVED
     semanticSearch: { ...base.semanticSearch, ...override.semanticSearch },
     backup: { ...base.backup, ...override.backup },
-    monitoring: { ...base.monitoring, ...override.monitoring }
+    monitoring: { ...base.monitoring, ...override.monitoring },
+    projects: { ...base.projects, ...override.projects }
   };
 
   return validateConfig(rawMerged);
@@ -466,7 +553,8 @@ export const ENV_MAPPINGS = {
   MAX_MEMORY_MB: 'memory.maxMemoryMB',
   CACHE_SIZE: 'memory.cacheSize',
   PLUGIN_DIR: 'plugins.directory',
-  DEBUG_LOGS: 'development.enableDebugLogs'
+  DEBUG_LOGS: 'development.enableDebugLogs',
+  PROJECTS_DIR: 'projects.defaultDirectory'
 } as const;
 
 export function applyEnvToConfig(config: ServerConfig): ServerConfig {

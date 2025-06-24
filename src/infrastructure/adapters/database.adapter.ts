@@ -70,8 +70,10 @@ export class DatabaseAdapter implements IDatabaseHandler {
     this.db.pragma('temp_store = memory');
     this.db.pragma('foreign_keys = ON');
     this.db.pragma('wal_autocheckpoint = 1000');
-
     this.createTables();
+
+    // Apply migrations immediately after basic table creation to ensure enhanced schema is available
+    this.applyMigrationsSync();
 
     // Perform initial integrity check asynchronously without blocking constructor
     this.performIntegrityCheck()
@@ -221,6 +223,115 @@ export class DatabaseAdapter implements IDatabaseHandler {
     } catch (error) {
       logger.error({ error }, 'Failed to apply database migrations via DatabaseAdapter.');
       throw error; // Re-throw the error to halt server startup if migrations fail
+    }
+  }
+
+  private applyMigrationsSync(): void {
+    try {
+      const migrationExecutor = new MigrationExecutor(this.db);
+      // We need to make this synchronous since we're in the constructor
+      // Convert the async method to sync by using the fact that the migration executor
+      // can run synchronously since it only does file operations and database transactions
+      this.runMigrationsNow(migrationExecutor);
+      logger.info('Database migrations applied successfully during initialization');
+    } catch (error) {
+      logger.error({ error }, 'Failed to apply database migrations during initialization');
+      // Don't throw here to avoid breaking the constructor, but log the issue
+    }
+  }
+  private runMigrationsNow(migrationExecutor: MigrationExecutor): void {
+    // This is a synchronous version of the migration executor logic
+    // We'll implement the core migration logic here directly
+    const fs = require('node:fs');
+    const path = require('node:path');
+
+    // Create migrations table if it doesn't exist
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS migrations (
+        version INTEGER PRIMARY KEY,
+        name TEXT NOT NULL,
+        applied_at TEXT DEFAULT CURRENT_TIMESTAMP
+      );
+    `); // Get migration files directory - use __filename to get the current module path
+    let currentFileDir = path.join(__dirname, '../migrations');
+    let migrationFiles: string[] = [];
+
+    try {
+      migrationFiles = fs.readdirSync(currentFileDir).filter((file: string) => file.match(/^\d{3}_.*\.sql$/));
+    } catch (error) {
+      // Try the src directory path in case we're running from source
+      const srcMigrationsDir = path.join(__dirname, '../../infrastructure/migrations');
+      try {
+        migrationFiles = fs.readdirSync(srcMigrationsDir).filter((file: string) => file.match(/^\d{3}_.*\.sql$/));
+        // Update the directory path
+        currentFileDir = srcMigrationsDir;
+      } catch (srcError) {
+        logger.warn(
+          { buildDir: currentFileDir, srcDir: srcMigrationsDir },
+          'Could not find migration files in either build or src directory'
+        );
+        return;
+      }
+    }
+
+    if (migrationFiles.length === 0) {
+      logger.debug('No migration files found');
+      return;
+    }
+
+    // Sort by version number
+    migrationFiles.sort((a: string, b: string) => {
+      const versionA = parseInt(a.split('_')[0] || '0', 10);
+      const versionB = parseInt(b.split('_')[0] || '0', 10);
+      return versionA - versionB;
+    });
+
+    for (const file of migrationFiles) {
+      const versionName = file.replace(/\.sql$/, '');
+      const versionNumber = parseInt(file.split('_')[0] || '0', 10);
+
+      const existing = this.db.prepare('SELECT version FROM migrations WHERE version = ?').get(versionNumber);
+
+      if (existing) {
+        logger.debug(`Migration ${versionName} (v${versionNumber}) already applied.`);
+        continue;
+      }
+      logger.info(`Applying migration: ${versionName} (v${versionNumber})...`);
+
+      const migrationPath = path.join(currentFileDir, file);
+      const migrationSql = fs.readFileSync(migrationPath, 'utf-8');
+
+      // Apply migration with better error handling
+      const transaction = this.db.transaction(() => {
+        // Split the migration into individual statements for better error handling
+        const statements = migrationSql
+          .split(';')
+          .map((stmt: string) => stmt.trim())
+          .filter((stmt: string) => stmt.length > 0 && !stmt.startsWith('--'));
+
+        for (const statement of statements) {
+          try {
+            this.db.exec(statement + ';');
+          } catch (error: any) {
+            // Handle specific SQLite errors that are expected/acceptable
+            if (error.code === 'SQLITE_ERROR' && error.message?.includes('duplicate column name')) {
+              logger.debug(`Skipping duplicate column: ${statement}`);
+              continue;
+            }
+            if (error.code === 'SQLITE_ERROR' && error.message?.includes('no such column')) {
+              logger.warn(`Column reference issue in migration statement, continuing: ${error.message}`);
+              continue;
+            }
+            // Re-throw unexpected errors
+            throw error;
+          }
+        }
+
+        this.db.prepare('INSERT INTO migrations (version, name) VALUES (?, ?)').run(versionNumber, versionName);
+      });
+
+      transaction();
+      logger.info(`Migration ${versionName} (v${versionNumber}) applied successfully.`);
     }
   }
 

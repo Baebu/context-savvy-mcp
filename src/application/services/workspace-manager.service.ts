@@ -16,6 +16,7 @@ import type {
 import type { IDatabaseHandler } from '../../core/interfaces/database.interface.js';
 import type { IFilesystemHandler } from '../../core/interfaces/filesystem.interface.js';
 import type { ISmartPathManager } from '@core/interfaces/smart-path.interface.js';
+import type { WorkspacePersistenceService } from './workspace-persistence.service.js';
 import { logger } from '../../utils/logger.js';
 
 @injectable()
@@ -26,7 +27,8 @@ export class WorkspaceManager implements IWorkspaceManager {
   constructor(
     @inject('DatabaseHandler') private db: IDatabaseHandler,
     @inject('FilesystemHandler') private filesystem: IFilesystemHandler,
-    @inject('SmartPathManager') private smartPathManager: ISmartPathManager
+    @inject('SmartPathManager') private smartPathManager: ISmartPathManager,
+    @inject('WorkspacePersistenceService') private persistence: WorkspacePersistenceService
   ) {
     this.initializeDatabase();
   }
@@ -190,6 +192,13 @@ export class WorkspaceManager implements IWorkspaceManager {
        VALUES (?, ?, ?)`,
       [id, new Date().toISOString(), JSON.stringify(workspace.metadata || {})]
     );
+
+    // NEW: Track workspace access for persistence
+    try {
+      await this.persistence.updateWorkspaceAccess(id);
+    } catch (error) {
+      logger.warn({ error, workspaceId: id }, 'Failed to update workspace access tracking');
+    }
 
     logger.info({ workspaceId: id, name: workspace.name }, 'Active workspace set');
   }

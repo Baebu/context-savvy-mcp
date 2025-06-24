@@ -1,8 +1,8 @@
-# Version: 2.0.0
+# Version: 2.1.0
 
 server:
-  name: context-savy-server
-  version: 2.0.0
+  name: context-savvy-mcp
+  version: 2.1.0
   transport: stdio
   fastmcp:
     enabled: true
@@ -20,7 +20,7 @@ security:
     - ./data
     - ./examples
     - ./config
-    - ~/context-savy-server
+    - ~/context-savvy-mcp
     - ~/Documents
   maxFileSize: 10485760 # 10MB
   enableAuditLog: true

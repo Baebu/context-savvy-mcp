@@ -9,6 +9,7 @@ import { ContainerInitializer } from './infrastructure/di/container-initializer.
 import { loadConfig } from './infrastructure/config/loader.js'; // This now uses the enhanced loader
 import { logger } from './utils/logger.js';
 import type { ISecurityValidator } from './core/interfaces/security.interface.js'; // Import SecurityValidator interface
+import type { StartupSequenceService } from './application/services/startup-sequence.service.js';
 
 async function ensureDataDirectory(dbPath: string): Promise<void> {
   // dbPath is now expected to be absolute after CWD change and config update
@@ -114,6 +115,20 @@ async function main() {
 
     container.bind('Config').toConstantValue(config);
     await ContainerInitializer.initialize(container);
+
+    // Execute workspace persistence startup sequence
+    try {
+      logger.info('[Index] Executing workspace persistence startup sequence...');
+      const startupSequence = container.get<StartupSequenceService>('StartupSequenceService');
+      const startupResults = await startupSequence.executeStartupSequence();
+      logger.info({ 
+        totalSteps: startupResults.length,
+        successfulSteps: startupResults.filter(r => r.success).length,
+        failedSteps: startupResults.filter(r => !r.success).length
+      }, '[Index] Workspace persistence startup sequence completed');
+    } catch (error) {
+      logger.error({ error }, '[Index] Workspace persistence startup sequence failed, continuing with normal startup');
+    }
 
     // After DI initialization and potential CWD change, reinitialize security zones with enhanced features
     try {

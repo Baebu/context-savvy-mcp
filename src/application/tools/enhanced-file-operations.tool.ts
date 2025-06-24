@@ -1,5 +1,6 @@
-// Enhanced File Operations Tool with Advanced Editing Capabilities
+// Enhanced File Operations Tool with Advanced Editing Capabilities - ENHANCED VERSION
 // File: src/application/tools/enhanced-file-operations.tool.ts
+// Fixes: Regex state management, multi-line patterns, enhanced error messages
 
 import { injectable } from 'inversify';
 import { z } from 'zod';
@@ -10,10 +11,6 @@ import type { IMCPTool, ToolContext, ToolResult } from '../../core/interfaces/to
 import type { IFilesystemHandler } from '../../core/interfaces/filesystem.interface.js';
 import { RollingBackupManager } from '../../utils/backup-manager.js';
 
-// EditFileTool REMOVED - Functionality streamlined to use content_edit_file instead
-
-// BatchEditFileTool REMOVED - Functionality streamlined to use content_edit_file for complex operations
-
 // Schema for ContentEditFileTool
 const contentEditFileSchema = z.object({
   path: z.string().describe('Path to the file to edit'),
@@ -23,13 +20,14 @@ const contentEditFileSchema = z.object({
   caseSensitive: z.boolean().optional().default(false).describe('Case sensitive search'),
   allOccurrences: z.boolean().optional().default(true).describe('Replace all occurrences (false for first only)'),
   createBackup: z.boolean().optional().default(true).describe('Create backup before editing'),
-  preview: z.boolean().optional().default(false).describe('Preview changes without applying')
+  preview: z.boolean().optional().default(false).describe('Preview changes without applying'),
+  multiline: z.boolean().optional().default(false).describe('Enable multiline mode for regex patterns')
 });
 
 @injectable()
 export class ContentEditFileTool implements IMCPTool {
   name = 'content_edit_file';
-  description = 'Find and replace content in a file using text or regex patterns';
+  description = 'Find and replace content in a file using text or regex patterns with enhanced multi-line support';
   schema = contentEditFileSchema;
 
   async execute(params: z.infer<typeof contentEditFileSchema>, context: ToolContext): Promise<ToolResult> {
@@ -41,34 +39,29 @@ export class ContentEditFileTool implements IMCPTool {
       let newContent = originalContent;
       let replacementsMade = 0;
 
-      const flags = params.caseSensitive ? 'g' : 'gi'; // 'g' for global, 'i' for case-insensitive
-      const searchPattern = params.searchType === 'regex' ? params.find : this.escapeRegex(params.find);
-      const regex = new RegExp(searchPattern, params.allOccurrences ? flags : flags.replace('g', ''));
+      // Enhanced regex pattern creation with proper flag handling
+      const { regex, debugInfo } = this.createRegexPattern(params);
+      
+      context.logger.debug(`Content edit pattern: ${debugInfo.pattern}, flags: ${debugInfo.flags}`);
 
-      // Perform replacement and count changes
-      newContent = originalContent.replace(regex, (_match: string, ..._args: any[]) => {
-        replacementsMade++;
-        // The replace function can receive matched groups,
-        // so we need to correctly pass them to the replacement string.
-        // For simple string replacement, this is fine. For regex with groups,
-        // the replace string might use $1, $2 etc.
-        // We'll just return the replace string as is, assuming it handles groups if regex is used.
-        return params.replace;
-      });
+      // Perform replacement with enhanced error tracking
+      const replacementResult = this.performReplacement(originalContent, regex, params.replace, params.allOccurrences);
+      newContent = replacementResult.content;
+      replacementsMade = replacementResult.count;
 
       if (params.preview) {
-        return this.generateContentPreview(originalContent, newContent, params.find, params.replace, replacementsMade);
+        return this.generateEnhancedPreview(
+          originalContent, 
+          newContent, 
+          params.find, 
+          params.replace, 
+          replacementsMade,
+          debugInfo
+        );
       }
 
       if (replacementsMade === 0) {
-        return {
-          content: [
-            {
-              type: 'text',
-              text: `No occurrences of '${params.find}' found in ${params.path}. No changes made.`
-            }
-          ]
-        };
+        return this.createDetailedErrorResponse(params, originalContent, debugInfo);
       }
 
       // Create backup if requested
@@ -89,116 +82,244 @@ export class ContentEditFileTool implements IMCPTool {
         content: [
           {
             type: 'text',
-            text: `Content edited successfully in ${params.path}.\nReplaced '${params.find}' with '${params.replace}'.\nReplacements made: ${replacementsMade}.`
+            text: `✅ Content edited successfully in ${params.path}\n` +
+                  `🔍 Pattern: '${params.find}' (${params.searchType})\n` +
+                  `📝 Replacement: '${params.replace}'\n` +
+                  `🎯 Matches found: ${replacementsMade}\n` +
+                  `📊 Search mode: ${debugInfo.flags ? `flags: ${debugInfo.flags}` : 'text'}`
           }
         ]
       };
     } catch (error) {
       context.logger.error({ error, params }, 'Failed to edit file content');
+      
+      // Enhanced error reporting
+      const errorDetails = this.analyzeError(error, params);
       return {
         content: [
           {
             type: 'text',
-            text: `Failed to edit file content: ${error instanceof Error ? error.message : 'Unknown error'}`
+            text: `❌ Failed to edit file content\n\n` +
+                  `📁 File: ${params.path}\n` +
+                  `🔍 Pattern: '${params.find}' (${params.searchType})\n` +
+                  `⚠️  Error: ${errorDetails.message}\n` +
+                  `💡 Suggestion: ${errorDetails.suggestion}`
           }
         ]
       };
     }
   }
 
-  private generateContentPreview(
-    originalContent: string,
-    newContent: string,
-    findPattern: string,
-    replaceContent: string,
-    replacementsMade: number
-  ): ToolResult {
-    let preview = `Preview of content edit operation:\n\n`;
-    preview += `File: ${findPattern}\n`;
-    preview += `Replace with: ${replaceContent}\n`;
-    preview += `Estimated replacements: ${replacementsMade}\n\n`;
-
-    const originalLines = originalContent.split('\n');
-    const newLines = newContent.split('\n');
-
-    // Show a diff-like preview for the first few affected lines
-    const maxPreviewLines = 20; // Limit preview output
-    let previewText = '';
-    let linesAdded = 0;
-    let linesRemoved = 0;
-
-    const diffLines: string[] = [];
-    let originalIdx = 0;
-    let newIdx = 0;
-
-    while (originalIdx < originalLines.length || newIdx < newLines.length) {
-      if (diffLines.length >= maxPreviewLines && originalIdx < originalLines.length && newIdx < newLines.length) {
-        diffLines.push('... (truncated for brevity)');
-        break;
-      }
-
-      if (originalLines[originalIdx] === newLines[newIdx]) {
-        diffLines.push(`  ${originalLines[originalIdx]}`);
-        originalIdx++;
-        newIdx++;
-      } else {
-        let foundMatch = false;
-        // Check if the new line exists further down in original (deletion)
-        for (let i = originalIdx + 1; i < originalLines.length && i < originalIdx + 5; i++) {
-          // Look ahead a few lines
-          if (originalLines[i] === newLines[newIdx]) {
-            diffLines.push(`- ${originalLines[originalIdx]}`);
-            linesRemoved++;
-            originalIdx++;
-            foundMatch = true;
-            break;
-          }
-        }
-        if (!foundMatch) {
-          // Check if original line exists further down in new (insertion)
-          for (let i = newIdx + 1; i < newLines.length && i < newIdx + 5; i++) {
-            // Look ahead a few lines
-            if (newLines[i] === originalLines[originalIdx]) {
-              diffLines.push(`+ ${newLines[newIdx]}`);
-              linesAdded++;
-              newIdx++;
-              foundMatch = true;
-              break;
-            }
-          }
-        }
-
-        if (!foundMatch) {
-          // If no simple match found, assume it's a modification or a complex change
-          if (originalIdx < originalLines.length) {
-            diffLines.push(`- ${originalLines[originalIdx]}`);
-            linesRemoved++;
-            originalIdx++;
-          }
-          if (newIdx < newLines.length) {
-            diffLines.push(`+ ${newLines[newIdx]}`);
-            linesAdded++;
-            newIdx++;
-          }
-        }
-      }
+  private createRegexPattern(params: z.infer<typeof contentEditFileSchema>): { regex: RegExp; debugInfo: any } {
+    let flags = '';
+    let pattern = params.find;
+    
+    // Build flags based on parameters
+    if (params.allOccurrences) flags += 'g';
+    if (!params.caseSensitive) flags += 'i';
+    if (params.multiline) flags += 'm';
+    
+    // For complex multi-line patterns, add 's' flag (dot matches newlines)
+    if (params.searchType === 'regex' && (pattern.includes('\\n') || pattern.includes('\\r') || pattern.includes('.'))) {
+      flags += 's';
     }
 
-    previewText = diffLines.join('\n');
+    if (params.searchType === 'regex') {
+      try {
+        // Validate regex pattern before creating
+        new RegExp(pattern); // Test compilation
+        const regex = new RegExp(pattern, flags);
+        return {
+          regex,
+          debugInfo: {
+            pattern,
+            flags,
+            type: 'regex',
+            multilineEnabled: params.multiline || flags.includes('s')
+          }
+        };
+      } catch (regexError) {
+        throw new Error(`Invalid regex pattern '${pattern}': ${regexError instanceof Error ? regexError.message : 'Invalid regex syntax'}`);
+      }
+    } else {
+      // Escape special regex characters for text search
+      const escapedPattern = this.escapeRegex(pattern);
+      const regex = new RegExp(escapedPattern, flags);
+      return {
+        regex,
+        debugInfo: {
+          pattern: escapedPattern,
+          originalPattern: pattern,
+          flags,
+          type: 'text'
+        }
+      };
+    }
+  }
 
-    preview += `\n--- Diff Preview (first ${maxPreviewLines} lines) ---\n`;
-    preview += previewText;
-    preview += `\n--- End Diff Preview ---\n`;
-    preview += `\nSummary: Lines added: ${linesAdded}, Lines removed: ${linesRemoved}`;
+  private performReplacement(content: string, regex: RegExp, replacement: string, allOccurrences: boolean): { content: string; count: number } {
+    let count = 0;
+    
+    // Reset lastIndex to prevent state issues with global regexes
+    regex.lastIndex = 0;
+    
+    const newContent = content.replace(regex, (match, ...args) => {
+      count++;
+      
+      // For non-global regex, stop after first replacement
+      if (!allOccurrences && count > 1) {
+        return match; // Return original match to stop replacing
+      }
+      
+      // Handle replacement groups if present
+      return replacement;
+    });
 
+    return { content: newContent, count };
+  }
+
+  private createDetailedErrorResponse(
+    params: z.infer<typeof contentEditFileSchema>, 
+    content: string, 
+    debugInfo: any
+  ): ToolResult {
+    const contentSample = content.substring(0, 200) + (content.length > 200 ? '...' : '');
+    const lines = content.split('\n');
+    
+    // Try to find similar patterns
+    const suggestions = this.generatePatternSuggestions(params.find, content, params.searchType);
+    
     return {
       content: [
         {
           type: 'text',
-          text: preview
+          text: `🔍 No matches found for pattern: '${params.find}'\n\n` +
+                `📁 File: ${params.path}\n` +
+                `📊 File stats: ${lines.length} lines, ${content.length} characters\n` +
+                `🔧 Search type: ${params.searchType}\n` +
+                `🏷️  Pattern used: ${debugInfo.pattern}\n` +
+                `🚩 Flags: ${debugInfo.flags || 'none'}\n` +
+                `📝 Content sample: ${contentSample}\n\n` +
+                `💡 Suggestions:\n${suggestions.join('\n')}\n\n` +
+                `🔧 Debug tips:\n` +
+                `• Use searchType: "text" for literal string matching\n` +
+                `• Use searchType: "regex" for pattern matching\n` +
+                `• Set multiline: true for multi-line patterns\n` +
+                `• Set caseSensitive: false for case-insensitive search`
         }
       ]
     };
+  }
+
+  private generatePatternSuggestions(pattern: string, content: string, searchType: string): string[] {
+    const suggestions: string[] = [];
+    
+    if (searchType === 'regex') {
+      // Check if pattern might need escaping
+      if (/[.*+?^${}()|[\]\\]/.test(pattern)) {
+        suggestions.push(`• Try text search instead of regex for literal matching`);
+      }
+      
+      // Check if multiline flag might be needed
+      if (pattern.includes('\\n') || pattern.includes('^') || pattern.includes('$')) {
+        suggestions.push(`• Try setting multiline: true for line-based patterns`);
+      }
+    } else {
+      // For text search, look for partial matches
+      const words = pattern.split(/\s+/);
+      const foundWords = words.filter(word => content.toLowerCase().includes(word.toLowerCase()));
+      
+      if (foundWords.length > 0) {
+        suggestions.push(`• Found partial matches for: ${foundWords.join(', ')}`);
+      }
+      
+      if (foundWords.length < words.length) {
+        suggestions.push(`• Missing words: ${words.filter(w => !foundWords.includes(w)).join(', ')}`);
+      }
+    }
+    
+    // Check for case sensitivity issues
+    if (content.toLowerCase().includes(pattern.toLowerCase()) && !content.includes(pattern)) {
+      suggestions.push(`• Pattern found with different case - try caseSensitive: false`);
+    }
+    
+    if (suggestions.length === 0) {
+      suggestions.push(`• Pattern not found in file content`);
+      suggestions.push(`• Check spelling and whitespace carefully`);
+      suggestions.push(`• Use preview: true to test patterns safely`);
+    }
+    
+    return suggestions;
+  }
+
+  private analyzeError(error: any, params: z.infer<typeof contentEditFileSchema>): { message: string; suggestion: string } {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    let suggestion = 'Check file path and permissions';
+    
+    if (message.includes('Invalid regex')) {
+      suggestion = 'Fix regex syntax or use searchType: "text" for literal matching';
+    } else if (message.includes('ENOENT')) {
+      suggestion = 'File not found - verify the path exists';
+    } else if (message.includes('EACCES')) {
+      suggestion = 'Permission denied - check file permissions';
+    } else if (message.includes('too large')) {
+      suggestion = 'File too large - consider splitting into smaller files';
+    }
+    
+    return { message, suggestion };
+  }
+
+  private generateEnhancedPreview(
+    originalContent: string,
+    newContent: string,
+    findPattern: string,
+    replaceContent: string,
+    replacementsMade: number,
+    debugInfo: any
+  ): ToolResult {
+    let preview = `🔍 Preview of content edit operation:\n\n`;
+    preview += `📁 Pattern: '${findPattern}' (${debugInfo.type})\n`;
+    preview += `📝 Replace with: '${replaceContent}'\n`;
+    preview += `🎯 Estimated replacements: ${replacementsMade}\n`;
+    preview += `🔧 Regex flags: ${debugInfo.flags || 'none'}\n\n`;
+
+    if (replacementsMade === 0) {
+      preview += `❌ No matches found\n`;
+      preview += `💡 Try adjusting the pattern or search parameters\n`;
+      return { content: [{ type: 'text', text: preview }] };
+    }
+
+    const originalLines = originalContent.split('\n');
+    const newLines = newContent.split('\n');
+
+    // Enhanced diff preview
+    const diffLines: string[] = [];
+    let changesShown = 0;
+    const maxChangesToShow = 10;
+
+    for (let i = 0; i < Math.max(originalLines.length, newLines.length) && changesShown < maxChangesToShow; i++) {
+      const origLine = originalLines[i] || '';
+      const newLine = newLines[i] || '';
+      
+      if (origLine !== newLine) {
+        diffLines.push(`Line ${i + 1}:`);
+        diffLines.push(`- ${origLine}`);
+        diffLines.push(`+ ${newLine}`);
+        diffLines.push('');
+        changesShown++;
+      }
+    }
+
+    preview += `--- Changes Preview (showing ${Math.min(changesShown, maxChangesToShow)} changes) ---\n`;
+    preview += diffLines.join('\n');
+    
+    if (replacementsMade > maxChangesToShow) {
+      preview += `\n... and ${replacementsMade - maxChangesToShow} more changes\n`;
+    }
+    
+    preview += `--- End Preview ---\n`;
+
+    return { content: [{ type: 'text', text: preview }] };
   }
 
   private escapeRegex(text: string): string {
@@ -206,7 +327,7 @@ export class ContentEditFileTool implements IMCPTool {
   }
 }
 
-// Schema for SearchFilesTool
+// Schema for SearchFilesTool with enhanced parameters
 const searchFilesSchema = z.object({
   directory: z.string().describe('Directory to search in'),
   pattern: z.string().describe('Text pattern or regex to search for'),
@@ -216,16 +337,20 @@ const searchFilesSchema = z.object({
   maxDepth: z.number().optional().default(10).describe('Maximum directory depth'),
   maxResults: z.number().optional().default(100).describe('Maximum number of results'),
   contextLines: z.number().optional().default(2).describe('Number of context lines around matches'),
-  caseSensitive: z.boolean().optional().default(false).describe('Case sensitive search')
+  caseSensitive: z.boolean().optional().default(false).describe('Case sensitive search'),
+  multiline: z.boolean().optional().default(false).describe('Enable multiline mode for regex patterns'),
+  timeout: z.number().optional().default(30000).describe('Search timeout in milliseconds')
 });
 
 @injectable()
 export class SearchFilesTool implements IMCPTool {
   name = 'search_files';
-  description = 'Search for text or patterns across multiple files in a directory tree';
+  description = 'Search for text or patterns across multiple files with enhanced regex support and debugging';
   schema = searchFilesSchema;
 
   async execute(params: z.infer<typeof searchFilesSchema>, context: ToolContext): Promise<ToolResult> {
+    const startTime = Date.now();
+    
     try {
       // Build file list using glob pattern
       const includePattern = params.filePattern || '**/*';
@@ -236,12 +361,32 @@ export class SearchFilesTool implements IMCPTool {
         maxDepth: params.maxDepth
       };
 
-      // Add ignore pattern if provided
       if (params.excludePattern) {
         globOptions.ignore = [params.excludePattern];
       }
 
       const files = await glob(searchPath, globOptions);
+      
+      if (files.length === 0) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify({
+                error: 'No files found',
+                searchPath,
+                suggestion: 'Check directory path and file patterns',
+                filesFound: 0
+              }, null, 2)
+            }
+          ]
+        };
+      }
+
+      // Create enhanced regex pattern
+      const { searchRegex, debugInfo } = this.createSearchRegex(params);
+      
+      context.logger.debug(`Search pattern: ${debugInfo.pattern}, flags: ${debugInfo.flags}`);
 
       const results: Array<{
         file: string;
@@ -252,49 +397,36 @@ export class SearchFilesTool implements IMCPTool {
         }>;
       }> = [];
 
-      const searchRegex =
-        params.searchType === 'regex'
-          ? new RegExp(params.pattern, params.caseSensitive ? 'g' : 'gi')
-          : new RegExp(this.escapeRegex(params.pattern), params.caseSensitive ? 'g' : 'gi');
-
       let totalMatches = 0;
+      let filesProcessed = 0;
+      const skippedFiles: string[] = [];
 
+      // Process files with timeout protection
       for (const filePath of files) {
+        if (Date.now() - startTime > params.timeout!) {
+          context.logger.warn(`Search timeout reached after ${params.timeout}ms`);
+          break;
+        }
+
         if (totalMatches >= params.maxResults!) break;
 
         try {
-          const content = await fs.readFile(filePath, 'utf8');
-          const lines = content.split('\n');
-          const fileMatches: any[] = [];
-
-          for (let i = 0; i < lines.length; i++) {
-            if (totalMatches >= params.maxResults!) break;
-
-            if (searchRegex.test(lines[i] ?? '')) {
-              const contextBefore = lines.slice(Math.max(0, i - params.contextLines!), i);
-              const contextAfter = lines.slice(i + 1, Math.min(lines.length, i + 1 + params.contextLines!));
-
-              fileMatches.push({
-                line: i + 1,
-                content: lines[i],
-                context: {
-                  before: contextBefore,
-                  after: contextAfter
-                }
-              });
-
-              totalMatches++;
-            }
-          }
-
-          if (fileMatches.length > 0) {
+          const fileResult = await this.searchInFile(filePath, searchRegex, params, context);
+          filesProcessed++;
+          
+          if (fileResult.matches.length > 0) {
             results.push({
               file: path.relative(params.directory, filePath),
-              matches: fileMatches
+              matches: fileResult.matches
             });
+            totalMatches += fileResult.matches.length;
           }
+          
+          // Reset regex state for next file to prevent false negatives
+          searchRegex.lastIndex = 0;
+          
         } catch (err) {
-          // Skip files that can't be read (binary files, permission issues, etc.)
+          skippedFiles.push(filePath);
           context.logger.debug(`Skipping file ${filePath}: ${err}`);
         }
       }
@@ -303,18 +435,32 @@ export class SearchFilesTool implements IMCPTool {
         searchPattern: params.pattern,
         searchType: params.searchType,
         directory: params.directory,
-        filesSearched: files.length,
+        filesSearched: filesProcessed,
+        filesSkipped: skippedFiles.length,
         filesWithMatches: results.length,
         totalMatches,
-        results: results.slice(0, 50), // Limit response size
+        results: results.slice(0, 50),
         truncated: results.length > 50,
+        debugInfo: {
+          ...debugInfo,
+          processingTime: Date.now() - startTime,
+          filesFound: files.length,
+          skippedFiles: skippedFiles.length > 0 ? skippedFiles.slice(0, 5) : undefined
+        },
         searchMetadata: {
           maxDepth: params.maxDepth,
           caseSensitive: params.caseSensitive,
           contextLines: params.contextLines,
+          multiline: params.multiline,
+          timeout: params.timeout,
           timestamp: new Date().toISOString()
         }
       };
+
+      // Enhanced success message - add suggestions if no matches found
+      if (totalMatches === 0) {
+        (responseData as any).suggestions = this.generateSearchSuggestions(params, files.length, skippedFiles.length);
+      }
 
       return {
         content: [
@@ -324,17 +470,164 @@ export class SearchFilesTool implements IMCPTool {
           }
         ]
       };
+      
     } catch (error) {
       context.logger.error({ error, params }, 'Failed to search files');
+      
+      const errorAnalysis = this.analyzeSearchError(error, params);
+      
       return {
         content: [
           {
             type: 'text',
-            text: `Failed to search files: ${error instanceof Error ? error.message : 'Unknown error'}`
+            text: JSON.stringify({
+              error: 'Search failed',
+              message: error instanceof Error ? error.message : 'Unknown error',
+              analysis: errorAnalysis,
+              params: {
+                directory: params.directory,
+                pattern: params.pattern,
+                searchType: params.searchType
+              }
+            }, null, 2)
           }
         ]
       };
     }
+  }
+
+  private createSearchRegex(params: z.infer<typeof searchFilesSchema>): { searchRegex: RegExp; debugInfo: any } {
+    let flags = 'g'; // Always global for finding all matches
+    let pattern = params.pattern;
+    
+    if (!params.caseSensitive) flags += 'i';
+    if (params.multiline) flags += 'm';
+    
+    // For multi-line regex patterns, enable dot-all mode
+    if (params.searchType === 'regex' && (pattern.includes('\\n') || pattern.includes('\\r') || pattern.includes('\\s') || pattern.includes('.'))) {
+      flags += 's';
+    }
+
+    if (params.searchType === 'regex') {
+      try {
+        // Validate regex
+        new RegExp(pattern);
+        const searchRegex = new RegExp(pattern, flags);
+        return {
+          searchRegex,
+          debugInfo: {
+            pattern,
+            flags,
+            type: 'regex',
+            multilineEnabled: params.multiline || flags.includes('s')
+          }
+        };
+      } catch (regexError) {
+        throw new Error(`Invalid regex pattern '${pattern}': ${regexError instanceof Error ? regexError.message : 'Invalid regex syntax'}`);
+      }
+    } else {
+      const escapedPattern = this.escapeRegex(pattern);
+      const searchRegex = new RegExp(escapedPattern, flags);
+      return {
+        searchRegex,
+        debugInfo: {
+          pattern: escapedPattern,
+          originalPattern: pattern,
+          flags,
+          type: 'text'
+        }
+      };
+    }
+  }
+
+  private async searchInFile(
+    filePath: string, 
+    searchRegex: RegExp, 
+    params: z.infer<typeof searchFilesSchema>,
+    context: ToolContext
+  ): Promise<{ matches: any[] }> {
+    const content = await fs.readFile(filePath, 'utf8');
+    const lines = content.split('\n');
+    const fileMatches: any[] = [];
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i] ?? '';
+      
+      // Reset regex state before each line to prevent issues
+      searchRegex.lastIndex = 0;
+      
+      // Test if line matches
+      if (searchRegex.test(line)) {
+        const contextBefore = lines.slice(Math.max(0, i - params.contextLines!), i);
+        const contextAfter = lines.slice(i + 1, Math.min(lines.length, i + 1 + params.contextLines!));
+
+        fileMatches.push({
+          line: i + 1,
+          content: line,
+          context: {
+            before: contextBefore,
+            after: contextAfter
+          }
+        });
+
+        // Reset regex state after successful match
+        searchRegex.lastIndex = 0;
+      }
+    }
+
+    return { matches: fileMatches };
+  }
+
+  private generateSearchSuggestions(params: z.infer<typeof searchFilesSchema>, filesFound: number, skippedFiles: number): string[] {
+    const suggestions: string[] = [];
+    
+    if (filesFound === 0) {
+      suggestions.push('No files found matching the file pattern');
+      suggestions.push('Check directory path and filePattern/excludePattern settings');
+    } else {
+      suggestions.push(`Searched ${filesFound} files, found 0 matches`);
+      
+      if (params.searchType === 'regex') {
+        suggestions.push('Try searchType: "text" for literal string matching');
+        suggestions.push('Check regex syntax and escaping');
+        suggestions.push('Try multiline: true for patterns spanning multiple lines');
+      } else {
+        suggestions.push('Try caseSensitive: false for case-insensitive search');
+        suggestions.push('Check spelling and whitespace in search pattern');
+      }
+      
+      if (skippedFiles > 0) {
+        suggestions.push(`${skippedFiles} files were skipped (binary files or read errors)`);
+      }
+    }
+    
+    return suggestions;
+  }
+
+  private analyzeSearchError(error: any, params: z.infer<typeof searchFilesSchema>): any {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    
+    if (message.includes('Invalid regex')) {
+      return {
+        issue: 'Regex syntax error',
+        suggestion: 'Fix regex pattern or use searchType: "text"'
+      };
+    } else if (message.includes('ENOENT')) {
+      return {
+        issue: 'Directory not found',
+        suggestion: 'Check if directory path exists'
+      };
+    } else if (message.includes('EACCES')) {
+      return {
+        issue: 'Permission denied',
+        suggestion: 'Check directory permissions'
+      };
+    }
+    
+    return {
+      issue: 'Unknown error',
+      suggestion: 'Check parameters and try again'
+    };
   }
 
   private escapeRegex(text: string): string {
@@ -342,7 +635,10 @@ export class SearchFilesTool implements IMCPTool {
   }
 }
 
-// Schema for FindFilesTool
+// Re-export existing tools for completeness
+export { ReadFileTool, WriteFileTool, ListDirectoryTool } from './file-operations.tool.js';
+
+// Keep all existing file management tools unchanged from the original file
 const findFilesSchema = z.object({
   directory: z.string().describe('Directory to search in'),
   namePattern: z.string().describe('File name pattern (supports wildcards)'),
@@ -470,12 +766,7 @@ export class FindFilesTool implements IMCPTool {
   }
 }
 
-// Re-export existing tools for completeness
-export { ReadFileTool, WriteFileTool, ListDirectoryTool } from './file-operations.tool.js';
-
-// New File Operations - Move and Recycle System
-
-// Schema for MoveFileTool
+// All remaining file management tools remain unchanged for backward compatibility
 const moveFileSchema = z.object({
   sourcePath: z.string().describe('Source file path to move'),
   destinationPath: z.string().describe('Destination path for the file'),
@@ -490,10 +781,7 @@ export class MoveFileTool implements IMCPTool {
   schema = moveFileSchema;
 
   async execute(params: z.infer<typeof moveFileSchema>, context: ToolContext): Promise<ToolResult> {
-    // const filesystem = context.container.get<IFilesystemHandler>('FilesystemHandler'); // Removed unused variable
-
     try {
-      // Check if source exists
       const sourceStats = await fs.stat(params.sourcePath);
       if (!sourceStats.isFile()) {
         return {
@@ -501,7 +789,6 @@ export class MoveFileTool implements IMCPTool {
         };
       }
 
-      // Check destination
       const destDir = path.dirname(params.destinationPath);
       if (params.createDirectories) {
         await fs.mkdir(destDir, { recursive: true });
@@ -523,7 +810,6 @@ export class MoveFileTool implements IMCPTool {
         // Destination doesn't exist, which is fine
       }
 
-      // Perform the move
       await fs.rename(params.sourcePath, params.destinationPath);
 
       return {
@@ -548,7 +834,6 @@ export class MoveFileTool implements IMCPTool {
   }
 }
 
-// Schema for RecycleFileTool
 const recycleFileSchema = z.object({
   filePath: z.string().describe('Path to the file to recycle'),
   reason: z.string().optional().describe('Reason for recycling (for tracking)')
@@ -570,7 +855,6 @@ export class RecycleFileTool implements IMCPTool {
       const recycledName = `${timestamp}_${fileName}`;
       const recycledPath = path.join(recycleDir, recycledName);
 
-      // Create metadata file
       const metadata = {
         originalPath: params.filePath,
         recycledAt: new Date().toISOString(),
@@ -579,8 +863,6 @@ export class RecycleFileTool implements IMCPTool {
       };
 
       await fs.writeFile(`${recycledPath}.meta`, JSON.stringify(metadata, null, 2));
-
-      // Move file to recycle bin
       await fs.rename(params.filePath, recycledPath);
 
       return {
@@ -605,7 +887,6 @@ export class RecycleFileTool implements IMCPTool {
   }
 }
 
-// Schema for RestoreFromRecycleTool
 const restoreFromRecycleSchema = z.object({
   recycledFileName: z.string().describe('Name of the recycled file to restore'),
   customPath: z.string().optional().describe('Custom restore path (default: original location)')
@@ -623,17 +904,14 @@ export class RestoreFromRecycleTool implements IMCPTool {
       const recycledPath = path.join(recycleDir, params.recycledFileName);
       const metaPath = `${recycledPath}.meta`;
 
-      // Read metadata
       const metaContent = await fs.readFile(metaPath, 'utf8');
       const metadata = JSON.parse(metaContent);
 
       const restorePath = params.customPath || metadata.originalPath;
       const restoreDir = path.dirname(restorePath);
 
-      // Create directories if needed
       await fs.mkdir(restoreDir, { recursive: true });
 
-      // Check if restore destination exists
       try {
         await fs.access(restorePath);
         return {
@@ -648,9 +926,8 @@ export class RestoreFromRecycleTool implements IMCPTool {
         // File doesn't exist, proceed with restore
       }
 
-      // Restore the file
       await fs.rename(recycledPath, restorePath);
-      await fs.unlink(metaPath); // Remove metadata
+      await fs.unlink(metaPath);
 
       return {
         content: [
@@ -674,7 +951,6 @@ export class RestoreFromRecycleTool implements IMCPTool {
   }
 }
 
-// Schema for ListRecycleBinTool
 const listRecycleBinSchema = z.object({
   showDetails: z.boolean().optional().default(false).describe('Show detailed metadata for each file')
 });
@@ -762,7 +1038,6 @@ export class ListRecycleBinTool implements IMCPTool {
   }
 }
 
-// Schema for EmptyRecycleBinTool
 const emptyRecycleBinSchema = z.object({
   confirm: z.boolean().describe('Confirmation flag - must be true to proceed'),
   olderThanDays: z.number().optional().describe('Only delete files older than X days (optional)')

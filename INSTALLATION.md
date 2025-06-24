@@ -117,7 +117,7 @@ Now for the magic – tell Claude Desktop about your new server.
 #### Find Your Claude Config File
 
 **macOS:** `~/Library/Application Support/Claude/claude_desktop_config.json`
-**Windows:** `%APPDATA%\Claude\claude_desktop_config.json`  
+**Windows:** `%APPDATA%\Claude\claude_desktop_config.json`
 **Linux:** `~/.config/claude/claude_desktop_config.json`
 
 #### Add Your Server
@@ -300,6 +300,7 @@ security:
    - Try in a new conversation
 
 3. **Server builds successfully**
+
    ```bash
    npm run build
    # Should complete without errors
